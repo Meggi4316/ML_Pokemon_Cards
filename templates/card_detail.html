@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ card.name }}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<nav class="top-nav">
+    <div class="logo-area">
+        <strong>{{ card.name }}</strong>
+    </div>
+
+    <div class="nav-right">
+        <a href="/">Scanner</a>
+        <a href="/library">Library</a>
+        <a href="/trades">PokéFeed</a>
+        <a href="/users">Users</a>
+        <a href="/account">Account</a>
+        <a href="/logout">Logout</a>
+    </div>
+</nav>
+
+<main class="detail-page">
+    <section class="detail-card" id="detail-card">
+
+        <div class="detail-image-box">
+            <img src="/static/card_images/{{ card.name }}.png" class="detail-card-image">
+        </div>
+
+        <div class="detail-info-box">
+            <h1>{{ card.name }}</h1>
+
+            <p id="owned-quantity"><strong>Owned:</strong> x0</p>
+            <p><strong>Type:</strong> {{ card.type }}</p>
+            <p><strong>Collection Tier:</strong> <span id="collection-tier"></span></p>
+            <p><strong>Estimated Value:</strong> {{ card.value }}</p>
+            <p><strong>Power:</strong> {{ card.power }}</p>
+            <p>{{ card.description }}</p>
+
+            <a href="{{ card.search_url }}" target="_blank" class="detail-link">
+                Search card value online
+            </a>
+
+            <div class="detail-status-box">
+                <h2>Collection Status</h2>
+
+                <select id="detail-status" onchange="updateDetailStatus()">
+                    <option value="Keep">Keep</option>
+                    <option value="Trade">Trade</option>
+                    <option value="Sell">Sell</option>
+                    <option value="Want">Want</option>
+                </select>
+            </div>
+        </div>
+
+    </section>
+</main>
+
+<script>
+const cardName = "{{ card.name }}";
+
+function loadDetailStatus() {
+    const collection = JSON.parse(localStorage.getItem("collection")) || {};
+
+    if (collection[cardName]) {
+        document.getElementById("detail-status").value =
+            collection[cardName].status || "Keep";
+
+        document.getElementById("owned-quantity").innerHTML =
+            `<strong>Owned:</strong> x${collection[cardName].quantity}`;
+    }
+}
+
+function updateDetailStatus() {
+    const collection = JSON.parse(localStorage.getItem("collection")) || {};
+
+    if (collection[cardName]) {
+        collection[cardName].status =
+            document.getElementById("detail-status").value;
+
+        localStorage.setItem("collection", JSON.stringify(collection));
+    }
+}
+
+function loadCollectionTier() {
+
+    const legendaryTier = ["Ho-Oh"];
+
+    const rareTier = [
+        "Garbodor",
+        "Donphan",
+        "Avalugg",
+        "Ninetales",
+        "Ninetails"
+    ];
+
+    const uncommonTier = [
+        "Meowstic",
+        "Quilladin",
+        "Delibird"
+    ];
+
+    let tier = "Basic Tier";
+
+    if (legendaryTier.includes(cardName)) {
+        tier = "Legendary Tier";
+    }
+    else if (rareTier.includes(cardName)) {
+        tier = "Rare Tier";
+    }
+    else if (uncommonTier.includes(cardName)) {
+        tier = "Uncommon Tier";
+    }
+
+    document.getElementById("collection-tier").innerText = tier;
+}
+
+window.addEventListener("load", () => {
+    loadDetailStatus();
+    loadCollectionTier();
+});
+</script>
+
+</body>
+</html>

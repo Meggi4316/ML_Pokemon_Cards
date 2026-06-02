@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PokéScan Library</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<nav class="top-nav">
+    <div class="logo-area">
+        <strong>PokéScan Library</strong>
+    </div>
+
+    <div class="nav-right">
+        <a href="/">Scanner</a>
+        <a href="/library">Library</a>
+        <a href="/trades">PokéFeed</a>
+        <a href="/users">Users</a>
+        <a href="/account">Account</a>
+        <a href="/logout">Logout</a>
+    </div>
+</nav>
+
+<main class="profile-page">
+    <section class="profile-card">
+        <h1>My Pokémon Collection</h1>
+        <p>View your scanned cards, quantities, and trade status.</p>
+
+        <div class="collection-stats">
+    <div class="stat-box">
+        <h2 id="total-cards">0</h2>
+        <p>Cards</p>
+    </div>
+
+    <div class="stat-box">
+        <h2 id="trade-count">0</h2>
+        <p>Trading</p>
+    </div>
+
+    <div class="stat-box">
+        <h2 id="wishlist-count">0</h2>
+        <p>Wishlist</p>
+    </div>
+
+    <div class="stat-box">
+        <h2 id="collection-value">$0</h2>
+        <p>Estimated Value</p>
+    </div>
+
+    <div class="stat-box">
+            <h2 id="top-card">None</h2>
+            <p>Top Card</p>
+        </div>
+    </div>
+
+        <input id="search-bar" placeholder="Search your cards..." onkeyup="showLibrary()">
+
+        <div class="filter-buttons">
+            <button onclick="setFilter('All')">All</button>
+            <button onclick="setFilter('Keep')">Keep</button>
+            <button onclick="setFilter('Trade')">Trade</button>
+            <button onclick="setFilter('Sell')">Sell</button>
+            <button onclick="setFilter('Want')">Want</button>
+            <button onclick="setFilter('Favourite')">Favourites</button>    
+        </div>
+
+        <div id="profile-library" class="pokemon-grid"></div>
+    </section>
+</main>
+
+<script>
+function getRarityText(name) {
+
+    const legendaryTier = [
+        "Ho-Oh"
+    ];
+
+    const rareTier = [
+        "Garbodor",
+        "Donphan",
+        "Avalugg",
+        "Ninetales",
+        "Ninetails"
+    ];
+
+    const uncommonTier = [
+        "Meowstic",
+        "Quilladin",
+        "Delibird"
+    ];
+
+    if (legendaryTier.includes(name)) {
+        return "Legendary Tier";
+    }
+
+    if (rareTier.includes(name)) {
+        return "Rare Tier";
+    }
+
+    if (uncommonTier.includes(name)) {
+        return "Uncommon Tier";
+    }
+
+    return "Basic Tier";
+}
+
+function getRarityClass(name) {
+    return getRarityText(name).toLowerCase();
+}
+let currentFilter = "All";
+
+function setFilter(status) {
+    currentFilter = status;
+    showLibrary();
+}
+
+function getEstimatedValue(name) {
+    const values = {
+        "Ho-Oh": 12.00,
+        "Ninetales": 5.00,
+        "Ninetails": 5.00,
+        "Garbodor": 4.00,
+        "Donphan": 3.50,
+        "Avalugg": 3.00,
+        "Meowstic": 2.50,
+        "Quilladin": 2.00,
+        "Delibird": 1.80,
+        "Vulpix": 1.50,
+        "Froakie": 1.50,
+        "Mareep": 1.20,
+        "Phantump": 1.00,
+        "Pumpkaboo": 1.00,
+        "Pumkaboo": 1.00,
+        "Stunky": 0.80,
+        "Zubat": 0.80,
+        "Litleo": 0.80,
+        "Bergmite": 0.70,
+        "Baltoy": 0.70,
+        "Philippe": 0.50
+    };
+
+    return values[name] || 1.00;
+}
+
+function showLibrary() {
+    const collection = JSON.parse(localStorage.getItem("collection")) || {};
+    const cards = Object.values(collection).sort((a, b) =>
+        a.name.localeCompare(b.name)
+    );
+    const library = document.getElementById("profile-library");
+    const search = document.getElementById("search-bar").value.toLowerCase();
+
+    library.innerHTML = "";
+
+    document.getElementById("total-cards").innerText = cards.length;
+    document.getElementById("trade-count").innerText = cards.filter(card => card.status === "Trade").length;
+    document.getElementById("wishlist-count").innerText = cards.filter(card => card.status === "Want").length;
+
+    let totalValue = 0;
+    let topCardName = "None";
+    let topCardValue = 0;
+
+    cards.forEach(card => {
+        const value = getEstimatedValue(card.name) * Number(card.quantity || 1);
+        totalValue += value;
+
+        if (value > topCardValue) {
+            topCardValue = value;
+            topCardName = card.name;
+        }
+    });
+
+    document.getElementById("collection-value").innerText = `$${totalValue.toFixed(2)}`;
+    document.getElementById("top-card").innerText = topCardName;
+
+    cards.forEach(card => {
+        const matchesSearch = card.name.toLowerCase().includes(search);
+        const matchesFilter =
+            currentFilter === "All" ||
+            (currentFilter === "Favourite" && card.favourite) ||
+            (card.status || "Keep") === currentFilter;
+
+        if (!matchesSearch || !matchesFilter) return;
+
+        const item = document.createElement("div");
+        item.className = "pokemon-tile";
+
+        item.innerHTML = `
+            <div class="card-link">
+                <a href="/card/${card.name}">
+                    <img
+                        src="/static/card_images/${card.name}.png"
+                        onerror="this.style.display='none'"
+                    >
+                </a>
+                <div class="pokemon-info">
+                    <h2>${card.name}</h2>
+                    <p>x${card.quantity}</p>
+                    <span class="status-badge">${card.status || "Keep"}</span>
+                    <button class="fav-btn" onclick="toggleFavourite(event, '${card.id}')">
+                        ${card.favourite ? "★ Favourite" : "☆ Favourite"}
+                    </button>
+                    <span class="rarity-badge rarity-${getRarityClass(card.name)}">
+                    ${getRarityText(card.name)}
+                </span>    
+                    </div>
+            </div>
+        `;
+
+        library.appendChild(item);
+    });
+}
+
+function toggleFavourite(event, cardId) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const collection = JSON.parse(localStorage.getItem("collection")) || {};
+
+    if (collection[cardId]) {
+        collection[cardId].favourite = !collection[cardId].favourite;
+        localStorage.setItem("collection", JSON.stringify(collection));
+        showLibrary();
+    }
+}
+
+
+window.addEventListener("load", showLibrary);
+</script>
+
+</body>
+</html>

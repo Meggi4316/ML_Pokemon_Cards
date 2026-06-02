@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PokéScan Account</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<nav class="top-nav">
+    <div class="logo-area">
+        <strong>My Account</strong>
+    </div>
+
+    <div class="nav-right">
+        <a href="/">Scanner</a>
+        <a href="/library">Library</a>
+        <a href="/trades">PokéFeed</a>
+        <a href="/users">Users</a>
+        <a href="/account">Account</a>
+        <a href="/logout">Logout</a>
+    </div>
+</nav>
+
+<main class="account-dashboard">
+
+    <section class="account-profile-panel">
+
+        <div class="account-profile-text">
+            <h1>@{{ username }}</h1>
+            <p>Your collector account and PokéFeed activity.</p>
+        </div>
+
+        <div class="account-profile-image">
+            {% if profile_image %}
+                <img src="{{ profile_image }}" class="account-profile-pic">
+            {% else %}
+                <div class="empty-profile-pic">{{ username[0]|upper }}</div>
+            {% endif %}
+        </div>
+
+    </section>
+
+    <section class="account-tabs-card">
+
+        <div class="account-tabs">
+            <button class="account-tab active-tab" onclick="showAccountTab('profile', this)">Profile</button>
+            <button class="account-tab" onclick="showAccountTab('posts', this)">My Posts</button>
+            <button class="account-tab" onclick="showAccountTab('saved', this)">Saved Posts</button>
+            <button class="account-tab" onclick="showAccountTab('activity', this)">Offers & Messages</button>
+        </div>
+
+        <div id="profile-tab" class="account-tab-content">
+            <h2>Profile Settings</h2>
+
+            <form action="/upload-profile" method="POST" enctype="multipart/form-data" class="upload-form">
+                <label class="file-label">
+                    Choose Profile Picture
+                    <input type="file" name="profile_image" accept="image/*" required>
+                </label>
+
+                <button type="submit" class="small-upload-btn">
+                    Save Picture
+                </button>
+            </form>
+
+            <p>Use this page to manage your collector account.</p>
+        </div>
+
+        <div id="posts-tab" class="account-tab-content hidden">
+            <h2>My PokéFeed Posts</h2>
+            <div id="my-posts"></div>
+        </div>
+
+        <div id="saved-tab" class="account-tab-content hidden">
+            <h2>Saved Posts</h2>
+            <div id="saved-posts"></div>
+        </div>
+
+        <div id="activity-tab" class="account-tab-content hidden">
+            <h2>Offers & Messages</h2>
+            <div id="my-activity"></div>
+        </div>
+
+    </section>
+
+</main>
+
+<script>
+const currentUser = "{{ username }}";
+
+function showAccountTab(tabName, button) {
+    const contents = document.querySelectorAll(".account-tab-content");
+    const buttons = document.querySelectorAll(".account-tab");
+
+    contents.forEach(content => content.classList.add("hidden"));
+    buttons.forEach(btn => btn.classList.remove("active-tab"));
+
+    document.getElementById(`${tabName}-tab`).classList.remove("hidden");
+    button.classList.add("active-tab");
+}
+
+function loadAccountDashboard() {
+    const posts = JSON.parse(localStorage.getItem("tradePosts")) || [];
+
+    const myPosts = posts.filter(post => post.user === currentUser);
+    const savedPosts = posts.filter(post => (post.savedBy || []).includes(currentUser));
+
+    const myActivity = posts.filter(post => {
+        const offers = post.offers || [];
+        const messages = post.messages || [];
+
+        return (
+            offers.some(offer => offer.user === currentUser) ||
+            messages.some(message => message.user === currentUser)
+        );
+    });
+
+    renderMiniPosts("my-posts", myPosts, "You have not posted yet.");
+    renderMiniPosts("saved-posts", savedPosts, "No saved posts yet.");
+    renderMiniPosts("my-activity", myActivity, "No offers or messages yet.");
+}
+
+function renderMiniPosts(containerId, posts, emptyMessage) {
+    const container = document.getElementById(containerId);
+
+    container.innerHTML = "";
+
+    if (posts.length === 0) {
+        container.innerHTML = `<p>${emptyMessage}</p>`;
+        return;
+    }
+
+    posts.forEach(post => {
+        const item = document.createElement("div");
+        item.className = "mini-trade-post";
+
+        item.innerHTML = `
+            <img src="/static/card_images/${post.haveCard}.png" onerror="this.style.display='none'">
+
+            <div>
+                <h3>${post.haveCard} x${post.quantity}</h3>
+                <p><strong>@${post.user}</strong></p>
+                <p><strong>Wants:</strong> ${post.wantCard}</p>
+                <p>${post.message}</p>
+                <small>${post.date}</small>
+            </div>
+        `;
+
+        container.appendChild(item);
+    });
+}
+
+window.addEventListener("load", loadAccountDashboard);
+</script>
+
+</body>
+</html>

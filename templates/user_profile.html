@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ profile_username }}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<nav class="top-nav">
+    <div class="logo-area">
+        <strong>@{{ profile_username }}</strong>
+    </div>
+
+    <div class="nav-right">
+        <a href="/">Scanner</a>
+        <a href="/library">Library</a>
+        <a href="/trades">PokéFeed</a>
+        <a href="/users">Users</a>
+        <a href="/account">Account</a>
+        <a href="/logout">Logout</a>
+    </div>
+</nav>
+
+<main class="account-page">
+    <section class="account-card">
+
+        <div class="account-left">
+            <h1>@{{ profile_username }}</h1>
+            <p>Collector profile and public PokéFeed posts.</p>
+
+            <a href="/trades" class="detail-link">
+                Go to PokéFeed
+            </a>
+        </div>
+
+        <div class="account-right">
+            {% if profile_image %}
+                <img src="{{ profile_image }}" class="account-profile-pic">
+            {% else %}
+                <div class="empty-profile-pic">{{ profile_username[0]|upper }}</div>
+            {% endif %}
+        </div>
+
+    </section>
+
+    <section class="profile-card public-posts-card">
+        <h1>@{{ profile_username }}'s Posts</h1>
+        <div id="public-user-posts"></div>
+    </section>
+</main>
+
+<script>
+const profileUser = "{{ profile_username }}";
+const currentUser = "{{ username }}";
+
+function loadPublicPosts() {
+    const posts = JSON.parse(localStorage.getItem("tradePosts")) || [];
+    const container = document.getElementById("public-user-posts");
+
+    const userPosts = posts.filter(post => post.user === profileUser);
+
+    container.innerHTML = "";
+
+    if (userPosts.length === 0) {
+        container.innerHTML = "<p>This user has not posted anything yet.</p>";
+        return;
+    }
+
+    userPosts.forEach(post => {
+        const item = document.createElement("div");
+        item.className = "mini-trade-post";
+
+        item.innerHTML = `
+            <img
+                src="/static/card_images/${post.haveCard}.png"
+                onerror="this.style.display='none'"
+            >
+
+            <div>
+                <h3>${post.haveCard} x${post.quantity}</h3>
+                <p><strong>Wants:</strong> ${post.wantCard}</p>
+                <p>${post.message}</p>
+                <small>${post.date}</small>
+            </div>
+        `;
+
+        container.appendChild(item);
+    });
+}
+
+window.addEventListener("load", loadPublicPosts);
+</script>
+
+</body>
+</html>

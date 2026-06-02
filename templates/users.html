@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Users</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<nav class="top-nav">
+    <div class="logo-area">
+        <strong>Collectors</strong>
+    </div>
+
+    <div class="nav-right">
+        <a href="/">Scanner</a>
+        <a href="/library">Library</a>
+        <a href="/trades">PokéFeed</a>
+        <a href="/users">Users</a>
+        <a href="/account">Account</a>
+        <a href="/logout">Logout</a>
+    </div>
+</nav>
+
+<main class="profile-page">
+    <section class="profile-card">
+
+        <h1>Find Collectors</h1>
+        <p>Search users and view their public trade posts.</p>
+
+        <input
+            id="user-search"
+            placeholder="Search username..."
+            onkeyup="filterUsers()"
+        >
+
+        <div class="user-grid" id="user-grid">
+
+            {% for user in users %}
+                <a href="/user/{{ user[0] }}" class="user-card" data-username="{{ user[0] }}">
+                    {% if user[1] %}
+                        <img src="{{ user[1] }}">
+                    {% else %}
+                        <div class="user-placeholder">{{ user[0][0]|upper }}</div>
+                    {% endif %}
+
+                    <h2>@{{ user[0] }}</h2>
+                    <p>View profile</p>
+                </a>
+            {% endfor %}
+
+        </div>
+
+    </section>
+</main>
+
+<script>
+function filterUsers() {
+    const search = document.getElementById("user-search").value.toLowerCase();
+    const users = document.querySelectorAll(".user-card");
+
+    users.forEach(user => {
+        const username = user.dataset.username.toLowerCase();
+
+        if (username.includes(search)) {
+            user.style.display = "block";
+        } else {
+            user.style.display = "none";
+        }
+    });
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PokéScan</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<nav class="top-nav">
+    <div class="logo-area">
+        <strong>PokéScan</strong>
+    </div>
+
+    <div class="nav-right">
+        <a href="/">Scanner</a>
+        <a href="/library">Library</a>
+        <a href="/trades">PokéFeed</a>
+        <a href="/users">Users</a>
+        <a href="/account">Account</a>
+        <a href="/logout">Logout</a>
+    </div>
+</nav>
+
+<main class="scanner-page">
+    <section class="scanner-hero">
+
+        <div class="scanner-left-big">
+            <h1>Pokémon Card Scanner</h1>
+            <p>Hold your card close and steady. The scanner will confirm the card before saving it.</p>
+
+            <button id="start-btn" onclick="init()">Start Scanner</button>
+            <div id="webcam-container"></div>
+        </div>
+
+        <div class="scanner-right-big">
+
+            <div id="card-preview" class="card-preview hidden">
+                <img id="preview-image" src="">
+
+                <div>
+                    <h2 id="card-name"></h2>
+                    <p><strong>Type:</strong> <span id="card-type"></span></p>
+                    <p><strong>Rarity:</strong> <span id="card-rarity"></span></p>
+                    <p><strong>Estimated Value:</strong> <span id="card-value"></span></p>
+                    <p><strong>Power:</strong> <span id="card-power"></span></p>
+                    <p id="card-description"></p>
+
+                    <a id="card-search-link" href="#" target="_blank">
+                        Search card value online
+                    </a>
+
+                    <button id="next-card-btn" onclick="scanNextCard()">
+                        Scan Next Card
+                    </button>
+                </div>
+            </div>
+
+            <div class="result-box">
+                <h2>Scanner Result</h2>
+                <p id="best-result">No card scanned yet.</p>
+
+                <div id="confirm-box" class="hidden">
+                    <p id="confirm-text"></p>
+                    <button onclick="confirmCard()">Yes, this is correct</button>
+                    <button class="secondary-btn" onclick="rejectCard()">No, keep scanning</button>
+                </div>
+            </div>
+
+            <h2 class="prediction-title">Live Predictions</h2>
+            <div id="label-container"></div>
+
+        </div>
+
+    </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+<script src="/static/js/scanner.js"></script>
+
+</body>
+</html>
