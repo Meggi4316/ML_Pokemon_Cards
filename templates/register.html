@@ -22,5 +22,29 @@
             <p>Already have an account? <a href="/login">Login</a></p>
         </section>
     </main>
+
+    <script>
+    function updateNotificationBadge() {
+        const currentUser = "{{ username }}";
+        const notifications = JSON.parse(localStorage.getItem("notifications")) || [];
+        const count = notifications.filter(note => note.to === currentUser).length;
+
+        const badge = document.getElementById("nav-notification-count");
+
+        if (badge) {
+            badge.innerText = count;
+
+            if (count === 0) {
+                badge.style.display = "none";
+            } else {
+                badge.style.display = "inline-flex";
+            }
+        }
+    }
+
+    window.addEventListener("load", updateNotificationBadge);
+    </script>
+
+
 </body>
 </html>

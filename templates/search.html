@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Search</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<nav class="top-nav">
+    <div class="logo-area">
+        <strong>Search</strong>
+    </div>
+
+    <div class="nav-right">
+        <a href="/">Scanner</a>
+        <a href="/library">Library</a>
+        <a href="/pokedex">Pokédex</a>
+        <a href="/trades">Feed</a>
+        <a href="/search">Search</a>
+        <a href="/trade-checker">Trade Checker</a>
+        <a href="/users">Users</a>
+        <a href="/notifications">
+            🔔
+            <span id="nav-notification-count" class="notification-badge">0</span>
+        </a>
+        <a href="/account">Account</a>
+        <a href="/logout">Logout</a>
+    </div>
+</nav>
+
+<main class="search-page">
+
+    <section class="search-card">
+
+        <h1>Global Search</h1>
+
+        <p>
+            Search your cards, Pokémon types, collection tiers, and PokéFeed trade posts.
+        </p>
+
+        <input
+            id="global-search"
+            placeholder="Search for a card, type, user, or trade..."
+            onkeyup="runGlobalSearch()"
+        >
+
+        <div class="search-tabs">
+            <button onclick="setSearchMode('All')">All</button>
+            <button onclick="setSearchMode('Cards')">Cards</button>
+            <button onclick="setSearchMode('Posts')">Posts</button>
+            <button onclick="setSearchMode('Users')">Users</button>
+        </div>
+
+        <div id="search-results" class="search-results"></div>
+
+    </section>
+
+</main>
+
+<script>
+let searchMode = "All";
+
+const pokemonData = [
+    { name: "Avalugg", type: "Ice", tier: "Rare Tier" },
+    { name: "Baltoy", type: "Psychic", tier: "Basic Tier" },
+    { name: "Bergmite", type: "Ice", tier: "Basic Tier" },
+    { name: "Delibird", type: "Ice", tier: "Uncommon Tier" },
+    { name: "Donphan", type: "Fighting", tier: "Rare Tier" },
+    { name: "Froakie", type: "Water", tier: "Basic Tier" },
+    { name: "Garbodor", type: "Poison", tier: "Rare Tier" },
+    { name: "Ho-Oh", type: "Fire / Flying", tier: "Legendary Tier" },
+    { name: "Litleo", type: "Fire", tier: "Basic Tier" },
+    { name: "Mareep", type: "Electric", tier: "Basic Tier" },
+    { name: "Meowstic", type: "Psychic", tier: "Uncommon Tier" },
+    { name: "Ninetales", type: "Fire", tier: "Rare Tier" },
+    { name: "Phantump", type: "Ghost / Grass", tier: "Basic Tier" },
+    { name: "Philippe", type: "Unknown", tier: "Basic Tier" },
+    { name: "Pumpkaboo", type: "Ghost / Grass", tier: "Basic Tier" },
+    { name: "Quilladin", type: "Grass", tier: "Uncommon Tier" },
+    { name: "Stunky", type: "Dark / Poison", tier: "Basic Tier" },
+    { name: "Vulpix", type: "Fire", tier: "Basic Tier" },
+    { name: "Zubat", type: "Poison / Flying", tier: "Basic Tier" }
+];
+
+function setSearchMode(mode) {
+    searchMode = mode;
+    runGlobalSearch();
+}
+
+function runGlobalSearch() {
+    const query = document.getElementById("global-search").value.toLowerCase();
+    const results = document.getElementById("search-results");
+
+    const collection = JSON.parse(localStorage.getItem("collection")) || {};
+    const posts = JSON.parse(localStorage.getItem("tradePosts")) || [];
+
+    results.innerHTML = "";
+
+    if (!query) {
+        results.innerHTML = "<p>Start typing to search.</p>";
+        return;
+    }
+
+    if (searchMode === "All" || searchMode === "Cards") {
+        pokemonData
+            .filter(card =>
+                card.name.toLowerCase().includes(query) ||
+                card.type.toLowerCase().includes(query) ||
+                card.tier.toLowerCase().includes(query)
+            )
+            .forEach(card => {
+                const owned = collection[card.name];
+
+                const item = document.createElement("div");
+                item.className = "search-result-item";
+
+                item.innerHTML = `
+                    <img src="/static/card_images/${card.name}.png" onerror="this.style.display='none'">
+
+                    <div>
+                        <h2>${card.name}</h2>
+                        <p>${card.type} • ${card.tier}</p>
+                        <p>${owned ? "Owned x" + owned.quantity : "Not in collection yet"}</p>
+                        <a href="/card/${card.name}">View card</a>
+                    </div>
+                `;
+
+                results.appendChild(item);
+            });
+    }
+
+    if (searchMode === "All" || searchMode === "Posts") {
+        posts
+            .filter(post =>
+                post.haveCard.toLowerCase().includes(query) ||
+                post.wantCard.toLowerCase().includes(query) ||
+                post.user.toLowerCase().includes(query) ||
+                post.message.toLowerCase().includes(query)
+            )
+            .forEach(post => {
+                const item = document.createElement("div");
+                item.className = "search-result-item";
+
+                item.innerHTML = `
+                    <img src="/static/card_images/${post.haveCard}.png" onerror="this.style.display='none'">
+
+                    <div>
+                        <h2>@${post.user}</h2>
+                        <p>Offering ${post.haveCard} x${post.quantity}</p>
+                        <p>Wants ${post.wantCard}</p>
+                        <a href="/trades">Open PokéFeed</a>
+                    </div>
+                `;
+
+                results.appendChild(item);
+            });
+    }
+
+    if (searchMode === "All" || searchMode === "Users") {
+        const users = [...new Set(posts.map(post => post.user))];
+
+        users
+            .filter(user => user.toLowerCase().includes(query))
+            .forEach(user => {
+                const item = document.createElement("div");
+                item.className = "search-result-item";
+
+                item.innerHTML = `
+                    <div class="search-user-avatar">${user[0].toUpperCase()}</div>
+
+                    <div>
+                        <h2>@${user}</h2>
+                        <p>Collector profile</p>
+                        <a href="/user/${user}">View user</a>
+                    </div>
+                `;
+
+                results.appendChild(item);
+            });
+    }
+
+    if (results.innerHTML === "") {
+        results.innerHTML = "<p>No results found.</p>";
+    }
+}
+
+window.addEventListener("load", () => {
+    document.getElementById("search-results").innerHTML =
+        "<p>Start typing to search.</p>";
+});
+</script>
+
+<script>
+function updateNotificationBadge() {
+    const currentUser = "{{ username }}";
+    const notifications = JSON.parse(localStorage.getItem("notifications")) || [];
+    const count = notifications.filter(note => note.to === currentUser).length;
+
+    const badge = document.getElementById("nav-notification-count");
+
+    if (badge) {
+        badge.innerText = count;
+
+        if (count === 0) {
+            badge.style.display = "none";
+        } else {
+            badge.style.display = "inline-flex";
+        }
+    }
+}
+
+window.addEventListener("load", updateNotificationBadge);
+</script>
+
+</body>
+</html>

@@ -14,19 +14,49 @@
     <div class="nav-right">
         <a href="/">Scanner</a>
         <a href="/library">Library</a>
-        <a href="/trades">PokéFeed</a>
+        <a href="/pokedex">Pokédex</a>
+        <a href="/trades">Feed</a>
+        <a href="/search">Search</a>
+        <a href="/trade-checker">Trade Checker</a>
         <a href="/users">Users</a>
+        <a href="/notifications">
+            🔔
+            <span id="nav-notification-count" class="notification-badge">0</span>
+        </a>
         <a href="/account">Account</a>
         <a href="/logout">Logout</a>
     </div>
 </nav>
 
 <main class="account-page">
+
     <section class="account-card">
 
         <div class="account-left">
             <h1>@{{ profile_username }}</h1>
             <p>Collector profile and public PokéFeed posts.</p>
+
+            <button id="follow-btn" onclick="toggleFollowUser()">
+                Follow
+            </button>
+
+            <p id="follow-status"></p>
+            
+            <div class="profile-badges">
+                <span class="profile-badge">⭐ Collector</span>
+                <span class="profile-badge">🔥 Active Trader</span>
+                <span class="profile-badge">🤝 Trusted Trader</span>
+            </div>
+
+            <div class="successful-trades-box">
+                <strong>Successful Trades:</strong>
+                <span id="successful-trades-count">0</span>
+            </div>
+
+            <div class="follow-stats">
+                <span id="followers-count">0 Followers</span>
+                <span id="following-count">0 Following</span>
+            </div>
 
             <a href="/trades" class="detail-link">
                 Go to PokéFeed
@@ -47,11 +77,94 @@
         <h1>@{{ profile_username }}'s Posts</h1>
         <div id="public-user-posts"></div>
     </section>
+
 </main>
 
 <script>
 const profileUser = "{{ profile_username }}";
 const currentUser = "{{ username }}";
+
+function getFollowing() {
+    return JSON.parse(localStorage.getItem("following")) || {};
+}
+
+function saveFollowing(following) {
+    localStorage.setItem("following", JSON.stringify(following));
+}
+
+function loadFollowButton() {
+    const button = document.getElementById("follow-btn");
+    const status = document.getElementById("follow-status");
+
+    if (profileUser === currentUser) {
+        button.style.display = "none";
+        status.innerText = "This is your profile.";
+        return;
+    }
+
+    const following = getFollowing();
+
+    if (!following[currentUser]) {
+        following[currentUser] = [];
+    }
+
+    const isFollowing = following[currentUser].includes(profileUser);
+
+    button.innerText = isFollowing ? "Following" : "Follow";
+
+    status.innerText = isFollowing
+        ? `You are following @${profileUser}`
+        : `Follow @${profileUser} to see their posts easier.`;
+    
+    loadFollowStats();
+}
+
+function toggleFollowUser() {
+    if (profileUser === currentUser) {
+        return;
+    }
+
+    const following = getFollowing();
+
+    if (!following[currentUser]) {
+        following[currentUser] = [];
+    }
+
+    if (following[currentUser].includes(profileUser)) {
+        following[currentUser] =
+            following[currentUser].filter(user => user !== profileUser);
+    } else {
+        following[currentUser].push(profileUser);
+    }
+
+    saveFollowing(following);
+    loadFollowButton();
+    loadFollowStats();
+}
+
+function loadFollowStats() {
+    const following = getFollowing();
+
+    let followersCount = 0;
+    let followingCount = 0;
+
+    Object.keys(following).forEach(user => {
+        if (following[user].includes(profileUser)) {
+            followersCount++;
+        }
+
+        if (user === profileUser) {
+            followingCount = following[user].length;
+        }
+    });
+
+    document.getElementById("followers-count").innerText =
+        `${followersCount} Followers`;
+
+    document.getElementById("following-count").innerText =
+        `${followingCount} Following`;
+}
+
 
 function loadPublicPosts() {
     const posts = JSON.parse(localStorage.getItem("tradePosts")) || [];
@@ -67,8 +180,9 @@ function loadPublicPosts() {
     }
 
     userPosts.forEach(post => {
-        const item = document.createElement("div");
-        item.className = "mini-trade-post";
+        const item = document.createElement("a");
+        item.className = "profile-post-card";
+        item.href = "/trades";
 
         item.innerHTML = `
             <img
@@ -76,7 +190,7 @@ function loadPublicPosts() {
                 onerror="this.style.display='none'"
             >
 
-            <div>
+            <div class="profile-post-info">
                 <h3>${post.haveCard} x${post.quantity}</h3>
                 <p><strong>Wants:</strong> ${post.wantCard}</p>
                 <p>${post.message}</p>
@@ -88,7 +202,36 @@ function loadPublicPosts() {
     });
 }
 
-window.addEventListener("load", loadPublicPosts);
+function updateNotificationBadge() {
+    const notifications = JSON.parse(localStorage.getItem("notifications")) || [];
+    const count = notifications.filter(note => note.to === currentUser).length;
+
+    const badge = document.getElementById("nav-notification-count");
+
+    if (badge) {
+        badge.innerText = count;
+        badge.style.display = count === 0 ? "none" : "inline-flex";
+    }
+}
+
+function loadSuccessfulTrades() {
+    const trades = JSON.parse(localStorage.getItem("successfulTrades")) || [];
+
+    const count = trades.filter(trade =>
+        trade.users && trade.users.includes(profileUser)
+    ).length;
+
+    const box = document.getElementById("successful-trades-count");
+
+    if (box) {
+        box.innerText = count;
+    }
+}
+
+window.addEventListener("load", () => {
+    loadPublicPosts();
+    loadSuccessfulTrades();
+});
 </script>
 
 </body>

@@ -14,8 +14,13 @@
     <div class="nav-right">
         <a href="/">Scanner</a>
         <a href="/library">Library</a>
-        <a href="/trades">PokéFeed</a>
+        <a href="/pokedex">Pokédex</a>
+        <a href="/trades">Feed</a>
         <a href="/users">Users</a>
+        <a href="/notifications">
+            🔔
+            <span id="nav-notification-count" class="notification-badge">0</span>
+        </a>
         <a href="/account">Account</a>
         <a href="/logout">Logout</a>
     </div>
@@ -51,17 +56,45 @@
     </section>
 
     <section class="feed-wrapper">
-        <h2>Latest Posts</h2>
+    <h2>Latest Posts</h2>
 
-        <div class="feed-filter-bar">
-            <button onclick="setFeedFilter('All')">All</button>
-            <button onclick="setFeedFilter('Mine')">My Posts</button>
-            <button onclick="setFeedFilter('Saved')">Saved</button>
-            <button onclick="setFeedFilter('Trade')">Trade Offers</button>
-        </div>
+    <div class="trending-card-box">
+        <h3>🔥 Trending Cards</h3>
+        <div id="trending-cards"></div>
+    </div>
 
-        <div id="trade-posts" class="instagram-feed"></div>
-    </section>
+    <div class="feed-filter-bar">
+        <button onclick="setFeedFilter('All')">All</button>
+        <button onclick="setFeedFilter('Mine')">My Posts</button>
+        <button onclick="setFeedFilter('Saved')">Saved</button>
+        <button onclick="setFeedFilter('Trade')">Trade Offers</button>
+        <button onclick="setFeedFilter('Following')">Following</button>
+    </div>
+
+    <div class="market-search-bar">
+        <input
+            id="market-search"
+            placeholder="Search trades, cards, users, or wants..."
+            onkeyup="showTradePosts()"
+        >
+
+        <select id="market-type-filter" onchange="showTradePosts()">
+            <option value="All">All Types</option>
+            <option value="Fire">Fire</option>
+            <option value="Water">Water</option>
+            <option value="Grass">Grass</option>
+            <option value="Psychic">Psychic</option>
+            <option value="Poison">Poison</option>
+            <option value="Ice">Ice</option>
+            <option value="Electric">Electric</option>
+            <option value="Fighting">Fighting</option>
+            <option value="Ghost">Ghost</option>
+            <option value="Dark">Dark</option>
+        </select>
+    </div>
+
+    <div id="trade-posts" class="instagram-feed"></div>
+</section>
 
 </main>
 
@@ -69,10 +102,75 @@
 const currentUser = "{{ username }}";
 let feedFilter = "All";
 
+function createNotification(to, title, message) {
+    if (to === currentUser) {
+        return;
+    }
+
+    const notifications =
+        JSON.parse(localStorage.getItem("notifications")) || [];
+
+    notifications.push({
+        to: to,
+        from: currentUser,
+        title: title,
+        message: message,
+        date: new Date().toLocaleString()
+    });
+
+    localStorage.setItem(
+        "notifications",
+        JSON.stringify(notifications)
+    );
+}
+
 function setFeedFilter(filter) {
     feedFilter = filter;
     showTradePosts();
 }
+
+function getFollowing() {
+    return JSON.parse(localStorage.getItem("following")) || {};
+}
+
+function saveFollowing(following) {
+    localStorage.setItem("following", JSON.stringify(following));
+}
+
+function isFollowingUser(username) {
+    const following = getFollowing();
+
+    if (!following[currentUser]) {
+        following[currentUser] = [];
+    }
+
+    return following[currentUser].includes(username);
+}
+
+function toggleFollowFromPost(username) {
+    const following = getFollowing();
+
+    if (!following[currentUser]) {
+        following[currentUser] = [];
+    }
+
+    if (following[currentUser].includes(username)) {
+        following[currentUser] =
+            following[currentUser].filter(user => user !== username);
+    } else {
+        following[currentUser].push(username);
+
+        createNotification(
+            username,
+            "New Follower",
+            `@${currentUser} followed you.`
+        );
+    }
+
+    saveFollowing(following);
+    showTradePosts();
+}
+
 
 function loadHaveCards() {
     const collection = JSON.parse(localStorage.getItem("collection")) || {};
@@ -126,8 +224,9 @@ function createTradePost() {
     const wantCard = document.getElementById("want-card").value.trim();
     const message = document.getElementById("trade-message").value.trim();
 
-    if (!haveCard || !wantCard || !message) {
+   if (!haveCard || !wantCard || !message) {
         alert("Please fill in all fields.");
+        console.log("Missing fields:", haveCard, wantCard, message);
         return;
     }
 
@@ -159,7 +258,57 @@ function createTradePost() {
     document.getElementById("want-card").value = "";
     document.getElementById("trade-message").value = "";
 
+    feedFilter = "All";
+    renderTrendingCards();
     showTradePosts();
+}
+
+function renderTrendingCards() {
+    const posts = JSON.parse(localStorage.getItem("tradePosts")) || {};
+    const scores = {};
+
+    posts.forEach(post => {
+        const cardName = post.haveCard;
+
+        if (!scores[cardName]) {
+            scores[cardName] = 0;
+        }
+
+        scores[cardName] += 1;
+        scores[cardName] += (post.stars || []).length;
+        scores[cardName] += (post.savedBy || []).length;
+        scores[cardName] += (post.comments || []).length;
+        scores[cardName] += (post.offers || []).length;
+    });
+
+    const trending = Object.entries(scores)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5);
+
+    const container = document.getElementById("trending-cards");
+
+    if (!container) return;
+
+    if (trending.length === 0) {
+        container.innerHTML = "<p>No trending cards yet.</p>";
+        return;
+    }
+
+    container.innerHTML = "";
+
+    trending.forEach(([cardName, score], index) => {
+        const item = document.createElement("div");
+        item.className = "trending-card-item";
+
+        item.innerHTML = `
+            <span>#${index + 1}</span>
+            <img src="/static/card_images/${cardName}.png" onerror="this.style.display='none'">
+            <strong>${cardName}</strong>
+            <small>${score} points</small>
+        `;
+
+        container.appendChild(item);
+    });
 }
 
 function showTradePosts() {
@@ -181,16 +330,31 @@ function showTradePosts() {
         post.messages = post.messages || [];
 
         const isMine = post.user === currentUser;
-        const isSaved = post.savedBy.includes(currentUser);
-        const hasOffer = post.offers.length > 0;
+
+        const isSaved =
+            post.savedBy &&
+            post.savedBy.includes(currentUser);
+
+        const hasOffer =
+            post.offers &&
+            post.offers.length > 0;
+
+        const following =
+            JSON.parse(localStorage.getItem("following")) || {};
+
+        const myFollowing =
+            following[currentUser] || [];
+
+        if (feedFilter === "Mine" && !isMine) return;
+
+        if (feedFilter === "Saved" && !isSaved) return;
+
+        if (feedFilter === "Trade" && !hasOffer) return;
 
         if (
-            (feedFilter === "Mine" && !isMine) ||
-            (feedFilter === "Saved" && !isSaved) ||
-            (feedFilter === "Trade" && !hasOffer)
-        ) {
-            return;
-        }
+            feedFilter === "Following" &&
+            !myFollowing.includes(post.user)
+        ) return;
 
         const starred = post.stars.includes(currentUser);
         const saved = post.savedBy.includes(currentUser);
@@ -206,6 +370,13 @@ function showTradePosts() {
                             @${post.user}
                         </a>
                     </h3>
+
+                    ${post.user !== currentUser ? `
+                        <button class="mini-follow-btn" onclick="toggleFollowFromPost('${post.user}')">
+                            ${isFollowingUser(post.user) ? "Following" : "Follow"}
+                        </button>
+                    ` : ""}
+
                     <span>${post.date}</span>
                 </div>
 
@@ -249,6 +420,11 @@ function showTradePosts() {
                     </button>
 
                     <button onclick="offerTrade(${index})">Offer Trade</button>
+                    
+                    <button onclick="markTradeSuccessful(${index})">
+                        Mark Trade Successful
+                    </button>
+
                     <button onclick="openChat(${post.id})">Message</button>
                     <button onclick="toggleComments(${post.id})">
                         Comments (${post.comments.length})
@@ -282,10 +458,29 @@ function showTradePosts() {
                             post.offers.length === 0
                             ? "<p>No offers yet.</p>"
                             : post.offers.map(offer => `
-                                <p>
-                                    <strong>@${offer.user}</strong>
-                                    offered ${offer.offerText}
-                                </p>
+                                <div class="offer-card">
+                                    <div class="offer-header">
+                                        🤝 Trade Offer
+                                    </div>
+
+                                    <div class="offer-user">
+                                        @${offer.user}
+                                    </div>
+
+                                    <div class="offer-text">
+                                        ${offer.offerText}
+                                    </div>
+
+                                    <div class="offer-actions">
+                                        <button onclick="acceptTradeOffer('${offer.user}')">
+                                            Accept
+                                        </button>
+
+                                        <button onclick="declineTradeOffer('${offer.user}')">
+                                            Decline
+                                        </button>
+                                    </div>
+                                </div>
                             `).join("")
                         }
                     </div>
@@ -301,6 +496,7 @@ function showTradePosts() {
                                     <div class="chat-message ${message.user === currentUser ? "mine" : "theirs"}">
                                         <strong>@${message.user}</strong>
                                         <p>${message.text}</p>
+                                        <small>${message.time || ""}</small>
                                     </div>
                                 `).join("")
                             }
@@ -327,6 +523,34 @@ function showTradePosts() {
     localStorage.setItem("tradePosts", JSON.stringify(posts));
 }
 
+
+function getPokemonType(name) {
+    const types = {
+        "Avalugg": "Ice",
+        "Baltoy": "Psychic",
+        "Bergmite": "Ice",
+        "Delibird": "Ice",
+        "Donphan": "Fighting",
+        "Froakie": "Water",
+        "Garbodor": "Poison",
+        "Ho-Oh": "Fire / Flying",
+        "Litleo": "Fire",
+        "Mareep": "Electric",
+        "Meowstic": "Psychic",
+        "Ninetales": "Fire",
+        "Ninetails": "Fire",
+        "Phantump": "Ghost / Grass",
+        "Pumpkaboo": "Ghost / Grass",
+        "Quilladin": "Grass",
+        "Stunky": "Dark / Poison",
+        "Vulpix": "Fire",
+        "Zubat": "Poison / Flying"
+    };
+
+    return types[name] || "Unknown";
+}
+
+
 function starPost(index) {
     const posts = JSON.parse(localStorage.getItem("tradePosts")) || [];
     posts[index].stars = posts[index].stars || [];
@@ -336,6 +560,12 @@ function starPost(index) {
     } else {
         posts[index].stars.push(currentUser);
     }
+
+    createNotification(
+        posts[index].user,
+        "New Star",
+        `@${currentUser} starred your ${posts[index].haveCard} post.`
+    );
 
     localStorage.setItem("tradePosts", JSON.stringify(posts));
     showTradePosts();
@@ -402,6 +632,12 @@ function addComment(index, postId) {
         text: text
     });
 
+    createNotification(
+        posts[index].user,
+        "New Comment",
+        `@${currentUser} commented on your ${posts[index].haveCard} post.`
+    );
+
     localStorage.setItem("tradePosts", JSON.stringify(posts));
     showTradePosts();
 
@@ -428,8 +664,68 @@ function offerTrade(index) {
         offerText: offerText
     });
 
+    createNotification(
+        posts[index].user,
+        "New Trade Offer",
+        `@${currentUser} made an offer for your ${posts[index].haveCard}.`
+    );
+
     localStorage.setItem("tradePosts", JSON.stringify(posts));
     showTradePosts();
+}
+
+function markTradeSuccessful(index) {
+    const posts = JSON.parse(localStorage.getItem("tradePosts")) || [];
+    const post = posts[index];
+
+    const successfulTrades =
+        JSON.parse(localStorage.getItem("successfulTrades")) || [];
+
+    successfulTrades.push({
+        users: [currentUser, post.user],
+        card: post.haveCard,
+        date: new Date().toLocaleDateString()
+    });
+
+    localStorage.setItem(
+        "successfulTrades",
+        JSON.stringify(successfulTrades)
+    );
+
+    createNotification(
+        post.user,
+        "Successful Trade",
+        `@${currentUser} marked your ${post.haveCard} trade as successful.`
+    );
+
+    alert("Trade marked as successful!");
+}
+
+function markTradeSuccessful(index) {
+    const posts = JSON.parse(localStorage.getItem("tradePosts")) || [];
+    const post = posts[index];
+
+    const successfulTrades =
+        JSON.parse(localStorage.getItem("successfulTrades")) || [];
+
+    successfulTrades.push({
+        users: [currentUser, post.user],
+        card: post.haveCard,
+        date: new Date().toLocaleDateString()
+    });
+
+    localStorage.setItem(
+        "successfulTrades",
+        JSON.stringify(successfulTrades)
+    );
+
+    createNotification(
+        post.user,
+        "Successful Trade",
+        `@${currentUser} marked your ${post.haveCard} trade as successful.`
+    );
+
+    alert("Trade marked as successful!");
 }
 
 function sendChatMessage(index, postId) {
@@ -445,8 +741,18 @@ function sendChatMessage(index, postId) {
     posts[index].messages = posts[index].messages || [];
     posts[index].messages.push({
         user: currentUser,
-        text: text
+        text: text,
+        time: new Date().toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit"
+        })
     });
+
+    createNotification(
+     posts[index].user,
+        "New Message",
+        `@${currentUser} sent you a message about ${posts[index].haveCard}.`
+    );
 
     localStorage.setItem("tradePosts", JSON.stringify(posts));
     showTradePosts();
@@ -455,14 +761,63 @@ function sendChatMessage(index, postId) {
         const box = document.getElementById(`comments-${postId}`);
         if (box) {
             box.classList.remove("hidden");
+
+            const messages = box.querySelector(".chat-messages");
+            if (messages) {
+                messages.scrollTop = messages.scrollHeight;
+            }
         }
     }, 100);
 }
 
 window.addEventListener("load", () => {
     loadHaveCards();
+    renderTrendingCards();
     showTradePosts();
 });
+</script>
+
+<script>
+function updateNotificationBadge() {
+    const currentUser = "{{ username }}";
+    const notifications = JSON.parse(localStorage.getItem("notifications")) || [];
+    const count = notifications.filter(note => note.to === currentUser).length;
+
+    const badge = document.getElementById("nav-notification-count");
+
+    if (badge) {
+        badge.innerText = count;
+
+        if (count === 0) {
+            badge.style.display = "none";
+        } else {
+            badge.style.display = "inline-flex";
+        }
+    }
+}
+
+
+function acceptTradeOffer(username) {
+    alert(`Trade accepted with ${username}`);
+
+    createNotification(
+        username,
+        "Trade Accepted",
+        `${currentUser} accepted your trade offer.`
+    );
+}
+
+function declineTradeOffer(username) {
+    alert(`Trade declined with ${username}`);
+
+    createNotification(
+        username,
+        "Trade Declined",
+        `${currentUser} declined your trade offer.`
+    );
+}
+
+window.addEventListener("load", updateNotificationBadge);
 </script>
 
 </body>

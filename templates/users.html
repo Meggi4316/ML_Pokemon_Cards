@@ -14,8 +14,15 @@
     <div class="nav-right">
         <a href="/">Scanner</a>
         <a href="/library">Library</a>
-        <a href="/trades">PokéFeed</a>
+        <a href="/pokedex">Pokédex</a>
+        <<a href="/trades">Feed</a>
+        <a href="/search">Search</a>
+        <a href="/trade-checker">Trade Checker</a>
         <a href="/users">Users</a>
+        <a href="/notifications">
+            🔔
+            <span id="nav-notification-count" class="notification-badge">0</span>
+        </a>
         <a href="/account">Account</a>
         <a href="/logout">Logout</a>
     </div>
@@ -68,6 +75,28 @@ function filterUsers() {
         }
     });
 }
+</script>
+
+<script>
+function updateNotificationBadge() {
+    const currentUser = "{{ username }}";
+    const notifications = JSON.parse(localStorage.getItem("notifications")) || [];
+    const count = notifications.filter(note => note.to === currentUser).length;
+
+    const badge = document.getElementById("nav-notification-count");
+
+    if (badge) {
+        badge.innerText = count;
+
+        if (count === 0) {
+            badge.style.display = "none";
+        } else {
+            badge.style.display = "inline-flex";
+        }
+    }
+}
+
+window.addEventListener("load", updateNotificationBadge);
 </script>
 
 </body>

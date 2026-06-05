@@ -14,8 +14,15 @@
     <div class="nav-right">
         <a href="/">Scanner</a>
         <a href="/library">Library</a>
-        <a href="/trades">PokéFeed</a>
+        <a href="/pokedex">Pokédex</a>
+        <a href="/trades">Feed</a>
+        <a href="/search">Search</a>
+        <a href="/trade-checker">Trade Checker</a>
         <a href="/users">Users</a>
+        <a href="/notifications">
+            🔔
+            <span id="nav-notification-count" class="notification-badge">0</span>
+        </a>
         <a href="/account">Account</a>
         <a href="/logout">Logout</a>
     </div>
@@ -23,6 +30,21 @@
 
 <main class="detail-page">
     <section class="detail-card" id="detail-card">
+
+        <div class="pokemon-showcase-box">
+            <img
+                id="pokemon-showcase-sprite"
+                class="pokemon-showcase-sprite"
+            >
+
+            <h1 class="pokemon-showcase-name">
+                {{ card.name }}
+            </h1>
+
+            <div class="pokemon-showcase-tier" id="pokemon-showcase-tier">
+                Pokémon
+            </div>
+        </div>
 
         <div class="detail-image-box">
             <img src="/static/card_images/{{ card.name }}.png" class="detail-card-image">
@@ -32,11 +54,33 @@
             <h1>{{ card.name }}</h1>
 
             <p id="owned-quantity"><strong>Owned:</strong> x0</p>
-            <p><strong>Type:</strong> {{ card.type }}</p>
+            <div class="type-badges">
+                <span class="type-badge">
+                    {{ card.type }}
+                </span>
+            </div>
+
             <p><strong>Collection Tier:</strong> <span id="collection-tier"></span></p>
             <p><strong>Estimated Value:</strong> {{ card.value }}</p>
             <p><strong>Power:</strong> {{ card.power }}</p>
             <p>{{ card.description }}</p>
+
+            <div class="pokemon-facts-box">
+                <h3>Pokémon Facts</h3>
+
+                <p><strong>Species:</strong> <span id="pokemon-species">Pokémon</span></p>
+                <p><strong>Region:</strong> <span id="pokemon-region">Unknown</span></p>
+                <p><strong>Height:</strong> <span id="pokemon-height">Unknown</span></p>
+                <p><strong>Weight:</strong> <span id="pokemon-weight">Unknown</span></p>
+            </div>
+
+            <div class="evolution-box">
+                <h3>Evolution Line</h3>
+
+                <div id="evolution-line" class="evolution-line-sprites">
+                    No Evolution
+                </div>
+            </div>
 
             <a href="{{ card.search_url }}" target="_blank" class="detail-link">
                 Search card value online
@@ -83,6 +127,304 @@ function updateDetailStatus() {
     }
 }
 
+
+function loadPokemonSprite() {
+
+    const sprites = {
+        "Ho-Oh": "250",
+        "Vulpix": "37",
+        "Ninetales": "38",
+        "Meowstic": "678",
+        "Quilladin": "651",
+        "Delibird": "225",
+        "Froakie": "656",
+        "Mareep": "179",
+        "Phantump": "708",
+        "Pumpkaboo": "710",
+        "Pumkaboo": "710",
+        "Stunky": "434",
+        "Zubat": "41",
+        "Litleo": "667",
+        "Bergmite": "712",
+        "Baltoy": "343",
+        "Donphan": "232",
+        "Avalugg": "713",
+        "Garbodor": "569"
+    };
+
+    const pokeId = sprites[cardName];
+
+    if (!pokeId) return;
+
+    const img =
+        document.getElementById("pokemon-showcase-sprite");
+
+    img.src =
+        `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/animated/${pokeId}.gif`;
+
+    img.onerror = function() {
+        this.src =
+            `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokeId}.png`;
+    };
+}
+
+function loadPokemonFacts() {
+
+    const facts = {
+
+        "Ho-Oh": {
+            species: "Rainbow Pokémon",
+            region: "Johto",
+            height: "3.8m",
+            weight: "199kg",
+            evolution: [
+                { name: "Ho-Oh", id: "250" }
+            ]
+        },
+
+        "Vulpix": {
+            species: "Fox Pokémon",
+            region: "Kanto",
+            height: "0.6m",
+            weight: "9.9kg",
+            evolution: [
+                { name: "Vulpix", id: "37" },
+                { name: "Ninetales", id: "38" }
+            ]
+        },
+
+        "Mareep": {
+            species: "Wool Pokémon",
+            region: "Johto",
+            height: "0.6m",
+            weight: "7.8kg",
+            evolution: [
+                { name: "Mareep", id: "179" },
+                { name: "Flaaffy", id: "180" },
+                { name: "Ampharos", id: "181" }
+            ]
+        },
+
+        "Froakie": {
+            species: "Bubble Frog Pokémon",
+            region: "Kalos",
+            height: "0.3m",
+            weight: "7kg",
+            evolution: [
+                { name: "Froakie", id: "656" },
+                { name: "Frogadier", id: "657" },
+                { name: "Greninja", id: "658" }
+            ]
+        },
+
+        "Ninetales": {
+            species: "Fox Pokémon",
+            region: "Kanto",
+            height: "1.1m",
+            weight: "19.9kg",
+            evolution: [
+                { name: "Vulpix", id: "37" },
+                { name: "Ninetales", id: "38" }
+            ]
+        },
+
+        "Meowstic": {
+            species: "Constraint Pokémon",
+            region: "Kalos",
+            height: "0.6m",
+            weight: "8.5kg",
+            evolution: [
+                { name: "Espurr", id: "677" },
+                { name: "Meowstic", id: "678" }
+            ]
+        },
+
+        "Quilladin": {
+            species: "Spiny Armor Pokémon",
+            region: "Kalos",
+            height: "0.7m",
+            weight: "29kg",
+            evolution: [
+                { name: "Chespin", id: "650" },
+                { name: "Quilladin", id: "651" },
+                { name: "Chesnaught", id: "652" }
+            ]
+        },
+
+        "Delibird": {
+            species: "Delivery Pokémon",
+            region: "Johto",
+            height: "0.9m",
+            weight: "16kg",
+            evolution: [
+                { name: "Delibird", id: "225" }
+            ]
+        },
+
+        "Garbodor": {
+            species: "Trash Heap Pokémon",
+            region: "Unova",
+            height: "1.9m",
+            weight: "107.3kg",
+            evolution: [
+                { name: "Trubbish", id: "568" },
+                { name: "Garbodor", id: "569" }
+            ]
+        },
+
+        "Donphan": {
+            species: "Armor Pokémon",
+            region: "Johto",
+            height: "1.1m",
+            weight: "120kg",
+            evolution: [
+                { name: "Phanpy", id: "231" },
+                { name: "Donphan", id: "232" }
+            ]
+        },
+
+        "Avalugg": {
+            species: "Iceberg Pokémon",
+            region: "Kalos",
+            height: "2.0m",
+            weight: "505kg",
+            evolution: [
+                { name: "Bergmite", id: "712" },
+                { name: "Avalugg", id: "713" }
+            ]
+        },
+
+        "Bergmite": {
+            species: "Ice Chunk Pokémon",
+            region: "Kalos",
+            height: "1.0m",
+            weight: "99.5kg",
+            evolution: [
+                { name: "Bergmite", id: "712" },
+                { name: "Avalugg", id: "713" }
+            ]
+        },
+
+        "Phantump": {
+            species: "Stump Pokémon",
+            region: "Kalos",
+            height: "0.4m",
+            weight: "7kg",
+            evolution: [
+                { name: "Phantump", id: "708" },
+                { name: "Trevenant", id: "709" }
+            ]
+        },
+
+        "Pumpkaboo": {
+            species: "Pumpkin Pokémon",
+            region: "Kalos",
+            height: "0.4m",
+            weight: "5kg",
+            evolution: [
+                { name: "Pumpkaboo", id: "710" },
+                { name: "Gourgeist", id: "711" }
+            ]
+        },
+
+        "Pumkaboo": {
+            species: "Pumpkin Pokémon",
+            region: "Kalos",
+            height: "0.4m",
+            weight: "5kg",
+            evolution: [
+                { name: "Pumpkaboo", id: "710" },
+                { name: "Gourgeist", id: "711" }
+            ]
+        },
+
+        "Stunky": {
+            species: "Skunk Pokémon",
+            region: "Sinnoh",
+            height: "0.4m",
+            weight: "19.2kg",
+            evolution: [
+                { name: "Stunky", id: "434" },
+                { name: "Skuntank", id: "435" }
+            ]
+        },
+
+        "Zubat": {
+            species: "Bat Pokémon",
+            region: "Kanto",
+            height: "0.8m",
+            weight: "7.5kg",
+            evolution: [
+                { name: "Zubat", id: "41" },
+                { name: "Golbat", id: "42" },
+                { name: "Crobat", id: "169" }
+            ]
+        },
+
+        "Litleo": {
+            species: "Lion Cub Pokémon",
+            region: "Kalos",
+            height: "0.6m",
+            weight: "13.5kg",
+            evolution: [
+                { name: "Litleo", id: "667" },
+                { name: "Pyroar", id: "668" }
+            ]
+        },
+
+        "Baltoy": {
+            species: "Clay Doll Pokémon",
+            region: "Hoenn",
+            height: "0.5m",
+            weight: "21.5kg",
+            evolution: [
+                { name: "Baltoy", id: "343" },
+                { name: "Claydol", id: "344" }
+            ]
+        }
+    };
+
+    const data = facts[cardName];
+
+    if (!data) {
+        return;
+    }
+
+    document.getElementById("pokemon-species").innerText = data.species;
+    document.getElementById("pokemon-region").innerText = data.region;
+    document.getElementById("pokemon-height").innerText = data.height;
+    document.getElementById("pokemon-weight").innerText = data.weight;
+
+    const evolutionLine = document.getElementById("evolution-line");
+    evolutionLine.innerHTML = "";
+
+    data.evolution.forEach((pokemon, index) => {
+        const item = document.createElement("div");
+        item.className = "evolution-item";
+
+        item.innerHTML = `
+            <img
+                src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/animated/${pokemon.id}.gif"
+                onerror="
+                    this.src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemon.id}.png'
+                "
+            >
+
+            <span>${pokemon.name}</span>
+        `;
+
+        evolutionLine.appendChild(item);
+
+        if (index < data.evolution.length - 1) {
+            const arrow = document.createElement("span");
+            arrow.className = "evolution-arrow";
+            arrow.innerText = "→";
+            evolutionLine.appendChild(arrow);
+        }
+    });
+}
+
+
 function loadCollectionTier() {
 
     const legendaryTier = ["Ho-Oh"];
@@ -114,11 +456,15 @@ function loadCollectionTier() {
     }
 
     document.getElementById("collection-tier").innerText = tier;
+
+    document.getElementById("pokemon-showcase-tier").innerText = tier;
 }
 
 window.addEventListener("load", () => {
     loadDetailStatus();
     loadCollectionTier();
+    loadPokemonSprite();
+    loadPokemonFacts();
 });
 </script>
 

@@ -14,8 +14,15 @@
     <div class="nav-right">
         <a href="/">Scanner</a>
         <a href="/library">Library</a>
-        <a href="/trades">PokéFeed</a>
+        <a href="/pokedex">Pokédex</a>
+        <a href="/trades">Feed</a>
+        <a href="/search">Search</a>
+        <a href="/trade-checker">Trade Checker</a>
         <a href="/users">Users</a>
+        <a href="/notifications">
+            🔔
+            <span id="nav-notification-count" class="notification-badge">0</span>
+        </a>
         <a href="/account">Account</a>
         <a href="/logout">Logout</a>
     </div>
@@ -47,6 +54,7 @@
             <button class="account-tab" onclick="showAccountTab('posts', this)">My Posts</button>
             <button class="account-tab" onclick="showAccountTab('saved', this)">Saved Posts</button>
             <button class="account-tab" onclick="showAccountTab('activity', this)">Offers & Messages</button>
+            <button class="account-tab" onclick="showAccountTab('stats', this)">Stats</button>
         </div>
 
         <div id="profile-tab" class="account-tab-content">
@@ -81,6 +89,48 @@
             <div id="my-activity"></div>
         </div>
 
+        <div id="stats-tab" class="account-tab-content hidden">
+            <h2>Collector Dashboard</h2>
+
+            <div class="dashboard-stats-grid">
+                <div>
+                    <h3 id="dash-total-cards">0</h3>
+                    <p>Total Cards</p>
+                </div>
+
+                <div>
+                    <h3 id="dash-value">$0</h3>
+                    <p>Collection Value</p>
+                </div>
+
+                <div>
+                    <h3 id="dash-top-card">None</h3>
+                    <p>Top Card</p>
+                </div>
+
+                <div>
+                    <h3 id="dash-posts">0</h3>
+                    <p>PokéFeed Posts</p>
+                </div>
+
+                <div>
+                    <h3 id="dash-saved">0</h3>
+                    <p>Saved Posts</p>
+                </div>
+
+                <div>
+                    <h3 id="dash-rank">Beginner</h3>
+                    <p>Collector Rank</p>
+                </div>
+
+                <div>
+                    <h3 id="dash-successful-trades">0</h3>
+                    <p>Successful Trades</p>
+                </div>
+
+            </div>
+        </div>
+
     </section>
 
 </main>
@@ -89,15 +139,170 @@
 const currentUser = "{{ username }}";
 
 function showAccountTab(tabName, button) {
-    const contents = document.querySelectorAll(".account-tab-content");
-    const buttons = document.querySelectorAll(".account-tab");
+    document.querySelectorAll(".account-tab-content").forEach(tab => {
+        tab.classList.add("hidden");
+    });
 
-    contents.forEach(content => content.classList.add("hidden"));
-    buttons.forEach(btn => btn.classList.remove("active-tab"));
+    document.querySelectorAll(".account-tab").forEach(btn => {
+        btn.classList.remove("active-tab");
+    });
 
-    document.getElementById(`${tabName}-tab`).classList.remove("hidden");
-    button.classList.add("active-tab");
+    const selectedTab = document.getElementById(`${tabName}-tab`);
+
+    if (selectedTab) {
+        selectedTab.classList.remove("hidden");
+    }
+
+    if (button) {
+        button.classList.add("active-tab");
+    }
+
+    if (tabName === "posts") loadMyPosts();
+    if (tabName === "saved") loadSavedPosts();
+    if (tabName === "activity") loadActivity();
+    if (tabName === "stats") loadCollectorStats();
 }
+
+function loadMyPosts() {
+    const posts = JSON.parse(localStorage.getItem("tradePosts")) || [];
+    const container = document.getElementById("my-posts");
+
+    if (!container) return;
+
+    const myPosts = posts.filter(post => post.user === currentUser);
+
+    container.innerHTML = myPosts.length === 0
+        ? "<p>You have not posted anything yet.</p>"
+        : "";
+
+    myPosts.forEach(post => {
+        container.innerHTML += `
+            <a href="/trades" class="account-mini-post">
+                <img src="/static/card_images/${post.haveCard}.png" onerror="this.style.display='none'">
+
+                <div>
+                    <strong>${post.haveCard} x${post.quantity}</strong>
+                    <p>Wants: ${post.wantCard}</p>
+                    <small>${post.date}</small>
+                </div>
+            </a>
+        `;
+    });
+}
+
+function loadSavedPosts() {
+    const posts = JSON.parse(localStorage.getItem("tradePosts")) || [];
+    const container = document.getElementById("saved-posts");
+
+    if (!container) return;
+
+    const savedPosts = posts.filter(post =>
+        (post.savedBy || []).includes(currentUser)
+    );
+
+    container.innerHTML = savedPosts.length === 0
+        ? "<p>No saved posts yet.</p>"
+        : "";
+
+    savedPosts.forEach(post => {
+        container.innerHTML += `
+            <a href="/trades" class="account-mini-post">
+                <img src="/static/card_images/${post.haveCard}.png" onerror="this.style.display='none'">
+
+                <div>
+                    <strong>@${post.user}</strong>
+                    <p>${post.haveCard} for ${post.wantCard}</p>
+                    <small>${post.date}</small>
+                </div>
+            </a>
+        `;
+    });
+}
+
+function loadActivity() {
+    const posts = JSON.parse(localStorage.getItem("tradePosts")) || [];
+    const container = document.getElementById("my-activity");
+
+    if (!container) return;
+
+    let activity = [];
+    const accountMessages =
+        JSON.parse(localStorage.getItem("accountMessages")) || [];
+
+    const successfulTrades =
+        JSON.parse(localStorage.getItem("successfulTrades")) || [];
+
+    accountMessages
+        .filter(message => message.to === currentUser || message.from === currentUser)
+        .forEach(message => {
+            activity.push(`
+                <div class="activity-card">
+                    <h3>💬 Account Message</h3>
+                    <p><strong>@${message.from}</strong> to <strong>@${message.to}</strong></p>
+                    <p>${message.text}</p>
+                    <small>${message.date}</small>
+                </div>
+            `);
+        });
+
+    successfulTrades
+        .filter(trade => trade.users && trade.users.includes(currentUser))
+        .forEach(trade => {
+            activity.push(`
+                <div class="activity-card">
+                    <h3>✅ Accepted Trade</h3>
+                    <p><strong>${trade.offeredBy}</strong> and <strong>${trade.acceptedBy}</strong></p>
+                    <small>${trade.date}</small>
+                </div>
+            `);
+        });
+
+    posts.forEach((post, index) => {
+        if (post.user === currentUser) {
+            (post.offers || []).forEach(offer => {
+                activity.push(`
+                    <div class="activity-card">
+
+                        <h3>🤝 Trade Offer</h3>
+
+                        <img
+                            src="/static/card_images/${post.haveCard}.png"
+                            onerror="this.style.display='none'"
+                        >
+
+                        <p>
+                            <strong>@${offer.user}</strong>
+                            offered
+                            <strong>${offer.offerText}</strong>
+                        </p>
+
+                        <small>
+                            For your ${post.haveCard}
+                        </small>
+
+                        <div class="offer-actions">
+
+                            <button onclick="acceptTradeOffer('${offer.user}')">
+                                Accept Trade
+                            </button>
+
+                            <button onclick="openUserChat('${offer.user}')">
+                                Message User
+                            </button>
+
+                        </div>
+
+                    </div>
+                `);
+            });
+        }
+    });
+
+    container.innerHTML = activity.length === 0
+        ? "<p>No offers or messages yet.</p>"
+        : activity.join("");
+}
+
 
 function loadAccountDashboard() {
     const posts = JSON.parse(localStorage.getItem("tradePosts")) || [];
@@ -118,6 +323,81 @@ function loadAccountDashboard() {
     renderMiniPosts("my-posts", myPosts, "You have not posted yet.");
     renderMiniPosts("saved-posts", savedPosts, "No saved posts yet.");
     renderMiniPosts("my-activity", myActivity, "No offers or messages yet.");
+}
+
+function loadCollectorStats() {
+    const collection = JSON.parse(localStorage.getItem("collection")) || {};
+    const posts = JSON.parse(localStorage.getItem("tradePosts")) || [];
+
+    const successfulTrades =
+    JSON.parse(localStorage.getItem("successfulTrades")) || [];
+
+    const mySuccessfulTrades =
+        successfulTrades.filter(trade =>
+            trade.users.includes(currentUser)
+    );
+
+    const cards = Object.values(collection);
+    const myPosts = posts.filter(post => post.user === currentUser);
+    const savedPosts = posts.filter(post => (post.savedBy || []).includes(currentUser));
+
+    let totalValue = 0;
+    let topCard = "None";
+    let topValue = 0;
+
+    cards.forEach(card => {
+        const value = getEstimatedValue(card.name) * Number(card.quantity || 1);
+        totalValue += value;
+
+        if (value > topValue) {
+            topValue = value;
+            topCard = card.name;
+        }
+    });
+
+    let rank = "Beginner";
+    if (cards.length >= 5) rank = "Bronze";
+    if (cards.length >= 10) rank = "Silver";
+    if (cards.length >= 15) rank = "Gold";
+    if (cards.length >= 19) rank = "Master";
+
+    if (mySuccessfulTrades.length >= 3) {
+        rank = "🤝 Trusted Trader";
+    }
+
+    document.getElementById("dash-total-cards").innerText = cards.length;
+    document.getElementById("dash-value").innerText = `$${totalValue.toFixed(2)}`;
+    document.getElementById("dash-top-card").innerText = topCard;
+    document.getElementById("dash-posts").innerText = myPosts.length;
+    document.getElementById("dash-saved").innerText = savedPosts.length;
+    document.getElementById("dash-rank").innerText = rank;
+    document.getElementById("dash-successful-trades").innerText =
+        mySuccessfulTrades.length;
+}
+
+function getEstimatedValue(name) {
+    const values = {
+        "Ho-Oh": 12.00,
+        "Ninetales": 5.00,
+        "Garbodor": 4.00,
+        "Donphan": 3.50,
+        "Avalugg": 3.00,
+        "Meowstic": 2.50,
+        "Quilladin": 2.00,
+        "Delibird": 1.80,
+        "Vulpix": 1.50,
+        "Froakie": 1.50,
+        "Mareep": 1.20,
+        "Phantump": 1.00,
+        "Pumpkaboo": 1.00,
+        "Stunky": 0.80,
+        "Zubat": 0.80,
+        "Litleo": 0.80,
+        "Bergmite": 0.70,
+        "Baltoy": 0.70
+    };
+
+    return values[name] || 1.00;
 }
 
 function renderMiniPosts(containerId, posts, emptyMessage) {
@@ -150,7 +430,79 @@ function renderMiniPosts(containerId, posts, emptyMessage) {
     });
 }
 
-window.addEventListener("load", loadAccountDashboard);
+
+function acceptTradeOffer(username) {
+    const successfulTrades =
+        JSON.parse(localStorage.getItem("successfulTrades")) || [];
+
+    successfulTrades.push({
+        users: [currentUser, username],
+        acceptedBy: currentUser,
+        offeredBy: username,
+        date: new Date().toLocaleDateString(),
+        status: "Accepted Trade"
+    });
+
+    localStorage.setItem("successfulTrades", JSON.stringify(successfulTrades));
+
+    const notifications =
+        JSON.parse(localStorage.getItem("notifications")) || [];
+
+    notifications.push({
+        to: username,
+        from: currentUser,
+        title: "Accepted Trade",
+        message: `@${currentUser} accepted your trade offer.`,
+        date: new Date().toLocaleString(),
+        read: false
+    });
+
+    localStorage.setItem("notifications", JSON.stringify(notifications));
+
+    alert("Accepted trade saved and notification sent.");
+    loadActivity();
+    loadCollectorStats();
+}
+
+function openUserChat(username) {
+    const text = prompt(`Message @${username}:`);
+
+    if (!text || text.trim() === "") return;
+
+    const accountMessages =
+        JSON.parse(localStorage.getItem("accountMessages")) || [];
+
+    accountMessages.push({
+        from: currentUser,
+        to: username,
+        text: text.trim(),
+        date: new Date().toLocaleString()
+    });
+
+    localStorage.setItem("accountMessages", JSON.stringify(accountMessages));
+
+    const notifications =
+        JSON.parse(localStorage.getItem("notifications")) || [];
+
+    notifications.push({
+        to: username,
+        from: currentUser,
+        title: "New Message",
+        message: `@${currentUser}: ${text.trim()}`,
+        date: new Date().toLocaleString(),
+        read: false
+    });
+
+    localStorage.setItem("notifications", JSON.stringify(notifications));
+
+    alert("Message sent.");
+    loadActivity();
+}
+
+window.addEventListener("load", () => {
+    loadAccountDashboard();
+    loadCollectorStats();
+});
 </script>
 
 </body>

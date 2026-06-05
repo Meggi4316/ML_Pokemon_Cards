@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Trade Value Checker</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<nav class="top-nav">
+    <div class="logo-area">
+        <strong>Trade Checker</strong>
+    </div>
+
+    <div class="nav-right">
+        <a href="/">Scanner</a>
+        <a href="/library">Library</a>
+        <a href="/pokedex">Pokédex</a>
+        <a href="/trades">Feed</a>
+        <a href="/search">Search</a>
+        <a href="/trade-checker">Trade Checker</a>
+        <a href="/users">Users</a>
+        <a href="/notifications">
+            🔔
+        <a href="/account">Account</a>
+        <a href="/logout">Logout</a>
+    </div>
+</nav>
+
+<main class="trade-checker-page">
+    <section class="trade-checker-card">
+
+        <h1>Trade Value Checker</h1>
+        <p>Compare both sides of a trade using estimated card values.</p>
+
+        <div class="trade-checker-grid">
+
+            <div class="trade-side">
+                <h2>Your Side</h2>
+
+                <select id="my-card"></select>
+                <input id="my-qty" type="number" min="1" value="1">
+
+                <button onclick="addTradeCard('mine')">
+                    Add to My Side
+                </button>
+
+                <div id="my-side-list"></div>
+            </div>
+
+            <div class="trade-side">
+                <h2>Their Side</h2>
+
+                <select id="their-card"></select>
+                <input id="their-qty" type="number" min="1" value="1">
+
+                <button onclick="addTradeCard('theirs')">
+                    Add to Their Side
+                </button>
+
+                <div id="their-side-list"></div>
+            </div>
+
+        </div>
+
+        <button class="calculate-trade-btn" onclick="calculateTrade()">
+            Calculate Trade Fairness
+        </button>
+
+        <div id="trade-result" class="trade-result-box hidden"></div>
+
+    </section>
+</main>
+
+<script>
+const cardValues = {
+    "Ho-Oh": 12.00,
+    "Ninetales": 5.00,
+    "Ninetails": 5.00,
+    "Garbodor": 4.00,
+    "Donphan": 3.50,
+    "Avalugg": 3.00,
+    "Meowstic": 2.50,
+    "Quilladin": 2.00,
+    "Delibird": 1.80,
+    "Vulpix": 1.50,
+    "Froakie": 1.50,
+    "Mareep": 1.20,
+    "Phantump": 1.00,
+    "Pumpkaboo": 1.00,
+    "Pumkaboo": 1.00,
+    "Stunky": 0.80,
+    "Zubat": 0.80,
+    "Litleo": 0.80,
+    "Bergmite": 0.70,
+    "Baltoy": 0.70,
+    "Philippe": 0.50
+};
+
+let mySide = [];
+let theirSide = [];
+
+function loadCardOptions() {
+    const collection = JSON.parse(localStorage.getItem("collection")) || {};
+    const cards = Object.values(collection);
+
+    const mySelect = document.getElementById("my-card");
+    const theirSelect = document.getElementById("their-card");
+
+    mySelect.innerHTML = "";
+    theirSelect.innerHTML = "";
+
+    if (cards.length === 0) {
+        mySelect.innerHTML = "<option>No cards in library</option>";
+        theirSelect.innerHTML = "<option>No cards in library</option>";
+        return;
+    }
+
+    cards.forEach(card => {
+        const option1 = document.createElement("option");
+        option1.value = card.name;
+        option1.textContent = `${card.name} x${card.quantity}`;
+
+        const option2 = document.createElement("option");
+        option2.value = card.name;
+        option2.textContent = card.name;
+
+        mySelect.appendChild(option1);
+        theirSelect.appendChild(option2);
+    });
+}
+
+function addTradeCard(side) {
+    const cardSelect =
+        side === "mine"
+        ? document.getElementById("my-card")
+        : document.getElementById("their-card");
+
+    const qtyInput =
+        side === "mine"
+        ? document.getElementById("my-qty")
+        : document.getElementById("their-qty");
+
+    const cardName = cardSelect.value;
+    const quantity = Number(qtyInput.value);
+
+    if (!cardName || quantity < 1) {
+        return;
+    }
+
+    const item = {
+        name: cardName,
+        quantity: quantity,
+        value: cardValues[cardName] || 1.00
+    };
+
+    if (side === "mine") {
+        mySide.push(item);
+    } else {
+        theirSide.push(item);
+    }
+
+    renderTradeLists();
+}
+
+function renderTradeLists() {
+    renderSide("my-side-list", mySide);
+    renderSide("their-side-list", theirSide);
+}
+
+function renderSide(containerId, cards) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = "";
+
+    if (cards.length === 0) {
+        container.innerHTML = "<p>No cards added yet.</p>";
+        return;
+    }
+
+    cards.forEach((card, index) => {
+        const item = document.createElement("div");
+        item.className = "trade-check-item";
+
+        item.innerHTML = `
+            <img src="/static/card_images/${card.name}.png" onerror="this.style.display='none'">
+
+            <div>
+                <strong>${card.name}</strong>
+                <p>x${card.quantity} • $${(card.value * card.quantity).toFixed(2)}</p>
+            </div>
+
+            <button onclick="removeTradeCard('${containerId}', ${index})">
+                Remove
+            </button>
+        `;
+
+        container.appendChild(item);
+    });
+}
+
+function removeTradeCard(containerId, index) {
+    if (containerId === "my-side-list") {
+        mySide.splice(index, 1);
+    } else {
+        theirSide.splice(index, 1);
+    }
+
+    renderTradeLists();
+}
+
+function calculateTrade() {
+    const myTotal = mySide.reduce((sum, card) => {
+        return sum + card.value * card.quantity;
+    }, 0);
+
+    const theirTotal = theirSide.reduce((sum, card) => {
+        return sum + card.value * card.quantity;
+    }, 0);
+
+    const difference = myTotal - theirTotal;
+
+    const result = document.getElementById("trade-result");
+    result.classList.remove("hidden");
+
+    let message = "";
+
+    if (Math.abs(difference) <= 1) {
+        message = "This trade looks fairly balanced.";
+    } else if (difference > 1) {
+        message = "You are giving more estimated value.";
+    } else {
+        message = "You are receiving more estimated value.";
+    }
+
+    result.innerHTML = `
+        <h2>Trade Result</h2>
+        <p><strong>Your Side:</strong> $${myTotal.toFixed(2)}</p>
+        <p><strong>Their Side:</strong> $${theirTotal.toFixed(2)}</p>
+        <p><strong>Difference:</strong> $${Math.abs(difference).toFixed(2)}</p>
+        <h3>${message}</h3>
+    `;
+}
+
+window.addEventListener("load", () => {
+    loadCardOptions();
+    renderTradeLists();
+});
+</script>
+
+</body>
+</html>

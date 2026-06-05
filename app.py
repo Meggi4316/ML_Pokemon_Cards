@@ -8,6 +8,8 @@ from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 
+#khfsjhfjjsnjk
+
 CARD_DATABASE = {
     "Stunky": {
         "name": "Stunky",
@@ -307,6 +309,17 @@ def library():
     )
 
 
+@app.route("/notifications")
+def notifications():
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    return render_template(
+        "notifications.html",
+        username=session["username"]
+    )
+
+
 @app.route("/account")
 def account():
     if "user_id" not in session:
@@ -334,6 +347,14 @@ def trades():
         "trades.html",
         username=session["username"]
     )
+
+
+@app.route("/trade-checker")
+def trade_checker():
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    return render_template("trade_checker.html", username=session["username"])
 
 @app.route("/card/<card_name>")
 def card_detail(card_name):
@@ -437,6 +458,19 @@ def user_profile(profile_username):
         username=session["username"]
     )
 
+@app.route("/pokedex")
+def pokedex():
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    return render_template("pokedex.html", username=session["username"])
+
+@app.route("/search")
+def search():
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    return render_template("search.html", username=session["username"])
 
 if __name__ == "__main__":
     init_db()

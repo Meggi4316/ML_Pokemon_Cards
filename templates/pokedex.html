@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pokédex</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<nav class="top-nav">
+    <div class="logo-area">
+        <strong>Pokédex</strong>
+    </div>
+
+    <div class="nav-right">
+        <a href="/">Scanner</a>
+        <a href="/library">Library</a>
+        <a href="/pokedex">Pokédex</a>
+        <a href="/trades">Feed</a>
+        <a href="/search">Search</a>
+        <a href="/trade-checker">Trade Checker</a>
+        <a href="/users">Users</a>
+        <a href="/notifications">
+            🔔
+            <span id="nav-notification-count" class="notification-badge">0</span>
+        </a>
+        <a href="/account">Account</a>
+        <a href="/logout">Logout</a>
+    </div>
+</nav>
+
+<main class="pokedex-page">
+
+    <section class="pokedex-header-card">
+        <h1>My Pokédex</h1>
+        <p>Search Pokémon, filter by type, view collection progress, unlock badges, and see which Pokémon you own.</p>
+
+        <div class="pokedex-stats">
+            <div>
+                <h2 id="owned-count">0</h2>
+                <p>Owned</p>
+            </div>
+
+            <div>
+             <h2 id="total-count">19</h2>
+                <p>Total Trained</p>
+            </div>
+
+            <div>
+                <h2 id="achievement-count">0</h2>
+                <p>Badges</p>
+            </div>
+
+            <div>
+                <h2 id="collector-rank">Beginner</h2>
+                <p>Collector Rank</p>
+            </div>
+        </div>
+
+        <div class="progress-section">
+            <div class="progress-header">
+                <span>Collection Progress</span>
+                <span id="progress-percent">0%</span>
+            </div>
+
+            <div class="progress-bar">
+                <div id="progress-fill"></div>
+            </div>
+        </div>
+
+        <div class="pokedex-controls">
+            <input id="pokedex-search" placeholder="Search for a card..." onkeyup="renderPokedex()">
+
+            <select id="type-filter" onchange="renderPokedex()">
+                <option value="All">All Types</option>
+                <option value="Fire">Fire</option>
+                <option value="Water">Water</option>
+                <option value="Grass">Grass</option>
+                <option value="Psychic">Psychic</option>
+                <option value="Dark">Dark</option>
+                <option value="Poison">Poison</option>
+                <option value="Ice">Ice</option>
+                <option value="Fighting">Fighting</option>
+                <option value="Flying">Flying</option>
+                <option value="Electric">Electric</option>
+                <option value="Ghost">Ghost</option>
+            </select>
+        </div>
+    </section>
+
+    <section class="achievement-section">
+        <h2>Achievement Badges</h2>
+        <div id="achievement-list" class="achievement-list"></div>
+    </section>
+
+    <section>
+        <div id="pokedex-grid" class="pokedex-grid"></div>
+    </section>
+
+</main>
+
+<div id="toast" class="toast hidden"></div>
+
+<script>
+const allPokemon = [
+    { name: "Avalugg", type: "Ice", tier: "Rare Tier" },
+    { name: "Baltoy", type: "Psychic", tier: "Basic Tier" },
+    { name: "Bergmite", type: "Ice", tier: "Basic Tier" },
+    { name: "Delibird", type: "Ice", tier: "Uncommon Tier" },
+    { name: "Donphan", type: "Fighting", tier: "Rare Tier" },
+    { name: "Froakie", type: "Water", tier: "Basic Tier" },
+    { name: "Garbodor", type: "Poison", tier: "Rare Tier" },
+    { name: "Ho-Oh", type: "Fire / Flying", tier: "Legendary Tier" },
+    { name: "Litleo", type: "Fire", tier: "Basic Tier" },
+    { name: "Mareep", type: "Electric", tier: "Basic Tier" },
+    { name: "Meowstic", type: "Psychic", tier: "Uncommon Tier" },
+    { name: "Ninetales", type: "Fire", tier: "Rare Tier" },
+    { name: "Phantump", type: "Ghost / Grass", tier: "Basic Tier" },
+    { name: "Philippe", type: "Unknown", tier: "Basic Tier" },
+    { name: "Pumpkaboo", type: "Ghost / Grass", tier: "Basic Tier" },
+    { name: "Quilladin", type: "Grass", tier: "Uncommon Tier" },
+    { name: "Stunky", type: "Dark / Poison", tier: "Basic Tier" },
+    { name: "Vulpix", type: "Fire", tier: "Basic Tier" },
+    { name: "Zubat", type: "Poison / Flying", tier: "Basic Tier" }
+];
+
+function getCollection() {
+    return JSON.parse(localStorage.getItem("collection")) || {};
+}
+
+function renderPokedex() {
+    const collection = getCollection();
+    const ownedNames = Object.values(collection).map(card => card.name);
+
+    const search = document.getElementById("pokedex-search").value.toLowerCase();
+    const typeFilter = document.getElementById("type-filter").value;
+    const grid = document.getElementById("pokedex-grid");
+
+    grid.innerHTML = "";
+
+    const filtered = allPokemon.filter(pokemon => {
+        return pokemon.name.toLowerCase().includes(search) &&
+        (typeFilter === "All" || pokemon.type.includes(typeFilter));
+    });
+
+    filtered.forEach(pokemon => {
+        const owned = ownedNames.includes(pokemon.name);
+        const quantity = owned && collection[pokemon.name] ? collection[pokemon.name].quantity : 0;
+
+        const item = document.createElement("div");
+        item.className = owned ? "pokedex-card owned-pokemon" : "pokedex-card locked-pokemon";
+
+        item.innerHTML = `
+            <div class="pokedex-card-inner">
+                <img src="/static/card_images/${pokemon.name}.png" onerror="this.style.display='none'">
+
+                <h2>${pokemon.name}</h2>
+
+                <span class="type-pill">${pokemon.type}</span>
+
+                <span class="rarity-badge rarity-${getTierClass(pokemon.tier)}">
+                    ${pokemon.tier}
+                </span>
+
+                ${owned ? `<p class="owned-label">Owned x${quantity}</p>` : `<p class="locked-label">Not collected yet</p>`}
+
+                <a href="/card/${pokemon.name}" class="pokedex-link">View Details</a>
+            </div>
+        `;
+
+        grid.appendChild(item);
+    });
+
+    updateStats();
+    renderAchievements();
+}
+
+function getTierClass(tier) {
+    return tier.toLowerCase().replace(" tier", "");
+}
+
+function updateStats() {
+    const collection = getCollection();
+    const ownedCount = Object.values(collection).length;
+    const totalCount = allPokemon.length;
+    const percent = Math.round((ownedCount / totalCount) * 100);
+
+    document.getElementById("owned-count").innerText = ownedCount;
+    document.getElementById("total-count").innerText = totalCount;
+    document.getElementById("progress-percent").innerText = `${percent}%`;
+    document.getElementById("progress-fill").style.width = `${percent}%`;
+
+    let rank = "Beginner";
+
+    if (ownedCount >= 5) {
+        rank = "Bronze";
+    }
+
+    if (ownedCount >= 10) {
+        rank = "Silver";
+    }
+
+    if (ownedCount >= 15) {
+        rank = "Gold";
+    }
+
+    if (ownedCount >= totalCount) {
+        rank = "Master";
+    }
+
+    document.getElementById("collector-rank").innerText = rank;
+}
+
+function renderAchievements() {
+    const collection = getCollection();
+    const cards = Object.values(collection);
+    const names = cards.map(card => card.name);
+
+    const badges = [];
+
+    if (cards.length >= 1) badges.push(["First Scan", "Scanned your first card"]);
+    if (cards.length >= 5) badges.push(["Bronze Collector", "Collected 5 Pokémon"]);
+    if (cards.length >= 10) badges.push(["Silver Collector", "Collected 10 Pokémon"]);
+    if (cards.length >= 15) badges.push(["Gold Collector", "Collected 15 Pokémon"]);
+
+    if (names.includes("Ho-Oh")) {
+        badges.push(["Legendary Hunter", "Collected Ho-Oh"]);
+    }
+
+    if (cards.some(card => card.status === "Trade")) {
+        badges.push(["Trader", "Marked a card for trade"]);
+    }
+
+    if (cards.some(card => card.favourite)) {
+        badges.push(["Favourite Pick", "Favourited a card"]);
+    }
+
+    const fireCards = ["Ho-Oh", "Litleo", "Ninetales", "Ninetails", "Vulpix"];
+    const iceCards = ["Avalugg", "Bergmite", "Delibird"];
+    const poisonCards = ["Garbodor", "Stunky", "Zubat"];
+    const ghostGrassCards = ["Phantump", "Pumpkaboo"];
+
+    if (fireCards.every(name => names.includes(name))) {
+        badges.push(["Fire Master", "Collected every Fire Pokémon"]);
+    }
+
+    if (iceCards.every(name => names.includes(name))) {
+        badges.push(["Ice Master", "Collected every Ice Pokémon"]);
+    }
+
+    if (poisonCards.every(name => names.includes(name))) {
+        badges.push(["Poison Master", "Collected every Poison Pokémon"]);
+    }
+
+    if (ghostGrassCards.every(name => names.includes(name))) {
+        badges.push(["Ghost Garden", "Collected Ghost/Grass Pokémon"]);
+    }
+
+    document.getElementById("achievement-count").innerText = badges.length;
+
+    const list = document.getElementById("achievement-list");
+    list.innerHTML = "";
+
+    if (badges.length === 0) {
+        list.innerHTML = "<p>No achievements yet. Scan your first card!</p>";
+        return;
+    }
+
+    badges.forEach(badgeInfo => {
+        const badge = document.createElement("div");
+        badge.className = "achievement-badge";
+
+        badge.innerHTML = `
+            <strong>${badgeInfo[0]}</strong>
+            <span>${badgeInfo[1]}</span>
+        `;
+
+        list.appendChild(badge);
+    });
+}
+
+function showToast(message) {
+    const toast = document.getElementById("toast");
+    toast.innerText = message;
+    toast.classList.remove("hidden");
+
+    setTimeout(() => {
+        toast.classList.add("hidden");
+    }, 2500);
+}
+
+window.addEventListener("load", () => {
+    renderPokedex();
+
+    if (Object.values(getCollection()).length > 0) {
+        showToast("Pokédex loaded with your collection.");
+    }
+});
+</script>
+
+</body>
+</html>

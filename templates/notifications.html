@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Notifications</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<nav class="top-nav">
+    <div class="logo-area">
+        <strong>Notifications</strong>
+    </div>
+
+    <div class="nav-right">
+        <a href="/">Scanner</a>
+        <a href="/library">Library</a>
+        <a href="/pokedex">Pokédex</a>
+        <a href="/trades">Feed</a>
+        <a href="/search">Search</a>
+        <a href="/trade-checker">Trade Checker</a>
+        <a href="/users">Users</a>
+        <a href="/notifications">
+            🔔
+            <span id="nav-notification-count" class="notification-badge">0</span>
+        </a>
+        <a href="/account">Account</a>
+        <a href="/logout">Logout</a>
+    </div>
+</nav>
+
+<main class="notification-page">
+    <section class="notification-card">
+
+        <h1>Notification Centre</h1>
+        <p>See follows, stars, comments, trade offers, and messages.</p>
+
+        <div class="notification-actions">
+            <button onclick="markAllRead()">Mark All Read</button>
+            <button onclick="clearNotifications()">Clear All</button>
+        </div>
+
+        <div id="notification-list" class="notification-list"></div>
+
+    </section>
+</main>
+
+<script>
+const currentUser = "{{ username }}";
+
+function getNotifications() {
+    return JSON.parse(localStorage.getItem("notifications")) || [];
+}
+
+function saveNotifications(notifications) {
+    localStorage.setItem("notifications", JSON.stringify(notifications));
+}
+
+function getIcon(title) {
+    const lower = title.toLowerCase();
+
+    if (lower.includes("follow")) return "👤";
+    if (lower.includes("star")) return "⭐";
+    if (lower.includes("comment")) return "💬";
+    if (lower.includes("offer") || lower.includes("trade")) return "🤝";
+    if (lower.includes("message")) return "📩";
+
+    return "🔔";
+}
+
+function loadNotifications() {
+    const notifications = getNotifications();
+    const list = document.getElementById("notification-list");
+
+    const myNotifications = notifications
+        .filter(note => note.to === currentUser)
+        .reverse();
+
+    list.innerHTML = "";
+
+    updateNotificationBadge();
+
+    if (myNotifications.length === 0) {
+        list.innerHTML = `
+            <div class="empty-notification">
+                <h2>You're all caught up!</h2>
+                <p>No notifications yet.</p>
+            </div>
+        `;
+        return;
+    }
+
+    myNotifications.forEach(note => {
+        const item = document.createElement("div");
+        item.className = note.read
+            ? "notification-item read"
+            : "notification-item unread";
+
+        item.innerHTML = `
+            <div class="notification-icon">
+                ${getIcon(note.title)}
+            </div>
+
+            <div class="notification-content">
+                <h3>${note.title}</h3>
+                <p>${note.message}</p>
+                <small>${note.date}</small>
+            </div>
+        `;
+
+        list.appendChild(item);
+    });
+}
+
+function markAllRead() {
+    const notifications = getNotifications();
+
+    notifications.forEach(note => {
+        if (note.to === currentUser) {
+            note.read = true;
+        }
+    });
+
+    saveNotifications(notifications);
+    loadNotifications();
+}
+
+function clearNotifications() {
+    const notifications = getNotifications()
+        .filter(note => note.to !== currentUser);
+
+    saveNotifications(notifications);
+    loadNotifications();
+}
+
+function updateNotificationBadge() {
+    const notifications = getNotifications();
+
+    const unreadCount = notifications.filter(note =>
+        note.to === currentUser && !note.read
+    ).length;
+
+    const badge = document.getElementById("nav-notification-count");
+
+    if (!badge) return;
+
+    badge.innerText = unreadCount;
+    badge.style.display = unreadCount === 0 ? "none" : "inline-flex";
+}
+
+window.addEventListener("load", loadNotifications);
+</script>
+
+</body>
+</html>

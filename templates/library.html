@@ -14,8 +14,15 @@
     <div class="nav-right">
         <a href="/">Scanner</a>
         <a href="/library">Library</a>
-        <a href="/trades">PokéFeed</a>
+        <a href="/pokedex">Pokédex</a>
+        <a href="/trades">Feed</a>
+        <a href="/search">Search</a>
+        <a href="/trade-checker">Trade Checker</a>
         <a href="/users">Users</a>
+        <a href="/notifications">
+            🔔
+            <span id="nav-notification-count" class="notification-badge">0</span>
+        </a>
         <a href="/account">Account</a>
         <a href="/logout">Logout</a>
     </div>
@@ -53,6 +60,11 @@
         </div>
     </div>
 
+        <div class="library-tabs">
+            <button onclick="showCardsView()">Cards</button>
+            <button onclick="showPokemonView()">Pokémon View</button>
+        </div>
+
         <input id="search-bar" placeholder="Search your cards..." onkeyup="showLibrary()">
 
         <div class="filter-buttons">
@@ -62,9 +74,17 @@
             <button onclick="setFilter('Sell')">Sell</button>
             <button onclick="setFilter('Want')">Want</button>
             <button onclick="setFilter('Favourite')">Favourites</button>    
+         
+            <button onclick="exportCollection()">
+                Export Collection
+            </button>
+        
+        
         </div>
 
         <div id="profile-library" class="pokemon-grid"></div>
+
+        <div id="pokemon-view" class="pokemon-grid hidden"></div>
     </section>
 </main>
 
@@ -196,6 +216,11 @@ function showLibrary() {
                 <div class="pokemon-info">
                     <h2>${card.name}</h2>
                     <p>x${card.quantity}</p>
+                    <div class="library-actions">
+                        <button onclick="removeOneCard('${card.id}')">-1</button>
+                        <button onclick="deleteCard('${card.id}')">Delete</button>
+                    </div>
+
                     <span class="status-badge">${card.status || "Keep"}</span>
                     <button class="fav-btn" onclick="toggleFavourite(event, '${card.id}')">
                         ${card.favourite ? "★ Favourite" : "☆ Favourite"}
@@ -211,6 +236,81 @@ function showLibrary() {
     });
 }
 
+function removeOneCard(cardId) {
+    const collection =
+        JSON.parse(localStorage.getItem("collection")) || {};
+
+    if (!collection[cardId]) return;
+
+    collection[cardId].quantity--;
+
+    if (collection[cardId].quantity <= 0) {
+        delete collection[cardId];
+    }
+
+    localStorage.setItem(
+        "collection",
+        JSON.stringify(collection)
+    );
+
+    showLibrary();
+}
+
+function deleteCard(cardId) {
+    const collection =
+        JSON.parse(localStorage.getItem("collection")) || {};
+
+    const confirmed =
+        confirm("Delete this card from your library?");
+
+    if (!confirmed) return;
+
+    delete collection[cardId];
+
+    localStorage.setItem(
+        "collection",
+        JSON.stringify(collection)
+    );
+
+    showLibrary();
+}
+
+function exportCollection() {
+    const collection =
+        JSON.parse(localStorage.getItem("collection")) || {};
+
+    const cards = Object.values(collection);
+
+    if (cards.length === 0) {
+        alert("No cards to export.");
+        return;
+    }
+
+    let csv =
+        "Name,Quantity,Status,Favourite,Date\n";
+
+    cards.forEach(card => {
+        csv +=
+            `${card.name},${card.quantity},${card.status || "Keep"},${card.favourite ? "Yes" : "No"},${card.date || ""}\n`;
+    });
+
+    const blob = new Blob(
+        [csv],
+        { type: "text/csv" }
+    );
+
+    const link = document.createElement("a");
+
+    link.href =
+        URL.createObjectURL(blob);
+
+    link.download =
+        "pokescan_collection.csv";
+
+    link.click();
+}
+
+
 function toggleFavourite(event, cardId) {
     event.preventDefault();
     event.stopPropagation();
@@ -224,6 +324,142 @@ function toggleFavourite(event, cardId) {
     }
 }
 
+function removeOneCard(cardId) {
+
+    const collection =
+        JSON.parse(localStorage.getItem("collection")) || {};
+
+    if (!collection[cardId]) return;
+
+    collection[cardId].quantity--;
+
+    if (collection[cardId].quantity <= 0) {
+        delete collection[cardId];
+    }
+
+    localStorage.setItem(
+        "collection",
+        JSON.stringify(collection)
+    );
+
+    showLibrary();
+}
+
+function deleteCard(cardId) {
+
+    const collection =
+        JSON.parse(localStorage.getItem("collection")) || {};
+
+    delete collection[cardId];
+
+    localStorage.setItem(
+        "collection",
+        JSON.stringify(collection)
+    );
+
+    showLibrary();
+}
+
+function showCardsView() {
+    document.getElementById("profile-library").classList.remove("hidden");
+    document.getElementById("pokemon-view").classList.add("hidden");
+}
+
+function showPokemonView() {
+    document.getElementById("profile-library").classList.add("hidden");
+    document.getElementById("pokemon-view").classList.remove("hidden");
+
+    renderPokemonView();
+}
+
+function renderPokemonView() {
+    const sprites = {
+        "Ho-Oh": "250",
+        "Vulpix": "37",
+        "Ninetales": "38",
+        "Ninetails": "38",
+        "Meowstic": "678",
+        "Quilladin": "651",
+        "Delibird": "225",
+        "Froakie": "656",
+        "Mareep": "179",
+        "Phantump": "708",
+        "Pumpkaboo": "710",
+        "Pumkaboo": "710",
+        "Stunky": "434",
+        "Zubat": "41",
+        "Litleo": "667",
+        "Bergmite": "712",
+        "Baltoy": "343",
+        "Donphan": "232",
+        "Avalugg": "713",
+        "Garbodor": "569"
+    };
+
+    const knownVariants = {
+        "Ho-Oh": 37,
+        "Vulpix": 52,
+        "Ninetales": 34,
+        "Ninetails": 34,
+        "Meowstic": 18,
+        "Quilladin": 12,
+        "Delibird": 22,
+        "Froakie": 48,
+        "Mareep": 41,
+        "Phantump": 19,
+        "Pumpkaboo": 20,
+        "Pumkaboo": 20,
+        "Stunky": 16,
+        "Zubat": 80,
+        "Litleo": 18,
+        "Bergmite": 12,
+        "Baltoy": 25,
+        "Donphan": 35,
+        "Avalugg": 14,
+        "Garbodor": 34
+    };
+
+    const collection = JSON.parse(localStorage.getItem("collection")) || {};
+    const container = document.getElementById("pokemon-view");
+
+    container.innerHTML = "";
+
+    Object.values(collection).forEach(card => {
+        const pokeId = sprites[card.name];
+
+        if (!pokeId) return;
+
+        const tile = document.createElement("div");
+        tile.className = "pokemon-sprite-tile";
+
+        tile.innerHTML = `
+            <a href="/card/${card.name}">
+                <img
+                    src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/animated/${pokeId}.gif"
+                    onerror="
+                        this.src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokeId}.png'
+                    "
+                >
+
+                <h3>${card.name}</h3>
+
+                <span class="pokemon-owned-badge">
+                    Collected
+                </span>
+
+                <p><strong>You own:</strong> ${card.quantity} card(s)</p>
+
+                <p><strong>Known card variants:</strong> ${knownVariants[card.name] || "Unknown"}</p>
+
+                <p class="pokemon-view-note">
+                    Click to view Pokémon showcase
+                </p>
+            </a>
+        `;
+
+        container.appendChild(tile);
+    });
+}
 
 window.addEventListener("load", showLibrary);
 </script>

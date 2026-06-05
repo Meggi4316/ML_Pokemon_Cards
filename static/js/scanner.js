@@ -12,6 +12,14 @@ const MODEL_URL = "/static/model/";
 const CONFIDENCE_NEEDED = 0.92;
 const STEADY_SCANS_NEEDED = 8;
 
+function fixCardName(name) {
+    const fixes = {
+        "Pumkaboo": "Pumpkaboo"
+    };
+
+    return fixes[name] || name;
+}
+
 async function init() {
     const startBtn = document.getElementById("start-btn");
     const webcamContainer = document.getElementById("webcam-container");
