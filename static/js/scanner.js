@@ -37,7 +37,9 @@ async function init() {
         startBtn.innerText = "Starting camera...";
 
         const stream = await navigator.mediaDevices.getUserMedia({
-            video: true,
+            video: {
+                facingMode: "environment"
+            },
             audio: false
         });
 
